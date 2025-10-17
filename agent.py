@@ -1,7 +1,7 @@
 """
 Agente de IA para Reparos Residenciais
-Agente com RAG que responde perguntas sobre reparos residenciais usando modelos locais
-e uma base de conhecimento em PDFs
+Agente com RAG e busca web que responde perguntas sobre reparos residenciais 
+usando modelos locais, base de conhecimento em PDFs e busca na internet
 """
 
 from langchain_ollama import ChatOllama
@@ -22,6 +22,7 @@ from prompts import (
 )
 
 from rag import VectorStoreManager, DocumentRetriever
+from tools import WebSearchTool
 
 
 class ConversationState(Enum):
@@ -33,7 +34,7 @@ class ConversationState(Enum):
 
 
 class RepairAgent:
-    """Agente especializado em reparos residenciais com RAG e acompanhamento de tentativas"""
+    """Agente especializado em reparos residenciais com RAG, busca web e acompanhamento de tentativas"""
     
     def __init__(
         self,
@@ -43,6 +44,7 @@ class RepairAgent:
         base_url: str = "http://localhost:11434",
         max_attempts: int = 3,
         use_rag: bool = True,
+        use_web_search: bool = True,
         chroma_db_path: str = "./chroma_db"
     ):
         """
@@ -55,6 +57,7 @@ class RepairAgent:
             base_url: URL do servidor Ollama, localhost:11434 por padrão
             max_attempts: Número máximo de tentativas antes de sugerir profissional
             use_rag: Se True, usa RAG para buscar documentos relevantes
+            use_web_search: Se True, usa busca web quando RAG não encontra informações
             chroma_db_path: Caminho para o banco de dados ChromaDB
         """
         self.llm = ChatOllama(
@@ -69,6 +72,7 @@ class RepairAgent:
         self.current_attempt = 0
         self.state = ConversationState.NEW_PROBLEM
         self.use_rag = use_rag
+        self.use_web_search = use_web_search
         
         # Inicializa RAG se disponível
         self.retriever: Optional[DocumentRetriever] = None
@@ -95,20 +99,40 @@ class RepairAgent:
         elif use_rag:
             print(f"⚠️  Base de conhecimento não encontrada em {chroma_db_path}")
             print("   Execute: uv run scripts/setup_rag.py")
+        
+        # Inicializa Web Search se habilitado
+        self.web_search: Optional[WebSearchTool] = None
+        if use_web_search:
+            try:
+                self.web_search = WebSearchTool(max_results=3, region="br-pt")
+                print("✅ Busca web inicializada com sucesso!")
+            except Exception as e:
+                print(f"⚠️  Busca web não disponível: {e}")
+                self.web_search = None
     
-    def _get_system_prompt(self, context: Optional[str] = None) -> str:
+    def _get_system_prompt(
+        self, 
+        rag_context: Optional[str] = None,
+        web_context: Optional[str] = None
+    ) -> str:
         """
         Retorna o prompt de sistema apropriado baseado no estado
         
         Args:
-            context: Contexto adicional do RAG (se disponível)
+            rag_context: Contexto da base de conhecimento (PDFs)
+            web_context: Contexto da busca web (internet)
         """
         prompt = BASE_SYSTEM_PROMPT
         
         # Adiciona contexto do RAG se disponível
-        if context:
-            prompt += f"\n\n## 📚 Informações da Base de Conhecimento:\n{context}\n"
-            prompt += "\nUse essas informações para fornecer uma resposta mais precisa e detalhada.\n"
+        if rag_context:
+            prompt += f"\n\n## 📚 Informações da Base de Conhecimento (PDFs):\n{rag_context}\n"
+            prompt += "\nUse essas informações dos manuais para fornecer uma resposta precisa.\n"
+        
+        # Adiciona contexto da web se disponível
+        if web_context:
+            prompt += f"\n\n## 🌐 Informações da Internet:\n{web_context}\n"
+            prompt += "\nUse essas informações atualizadas da internet como referência adicional.\n"
         
         if self.state == ConversationState.NEW_PROBLEM:
             prompt += NEW_PROBLEM_PROMPT
@@ -183,23 +207,41 @@ class RepairAgent:
         # Mostra mensagem de processamento
         print("🤖 Agente: Processando...", end="\r", flush=True)
         
-        # Busca contexto relevante no RAG (apenas para novas perguntas)
-        context = None
+        # 1. Busca contexto relevante no RAG (apenas para novas perguntas)
+        rag_context = None
+        web_context = None
+        
         if self.retriever and self.state == ConversationState.NEW_PROBLEM:
             try:
-                context, has_relevant = self.retriever.retrieve_and_format(user_message)
+                rag_context, has_relevant = self.retriever.retrieve_and_format(user_message)
                 if has_relevant:
-                    print("\n📚 Encontrei informações relevantes na base de conhecimento...\n")
+                    print("\n📚 Encontrei informações!\n")
             except Exception as e:
                 print(f"⚠️  Erro ao buscar documentos: {e}")
-                context = None
+                rag_context = None
+        
+        # 2. Se RAG não encontrou nada, busca na web (fallback)
+        if not rag_context and self.web_search and self.state == ConversationState.NEW_PROBLEM:
+            try:
+                print("🌐 Buscando informações na internet...\n")
+                web_context = self.web_search.search(user_message)
+                if web_context:
+                    print("✅ Encontrei informações atualizadas na internet!\n")
+                else:
+                    print("⚠️  Nenhuma informação relevante encontrada na web.\n")
+            except Exception as e:
+                print(f"⚠️  Erro na busca web: {e}")
+                web_context = None
         
         # Adiciona mensagem do usuário ao histórico
         self.conversation_history.append(HumanMessage(content=user_message))
         
         # Prepara as mensagens para o LLM
         messages = [
-            SystemMessage(content=self._get_system_prompt(context=context)),
+            SystemMessage(content=self._get_system_prompt(
+                rag_context=rag_context,
+                web_context=web_context
+            )),
             *self.conversation_history
         ]
         
@@ -238,16 +280,23 @@ def main():
     print("\nInicializando o agente...")
     
     try:
-        agent = RepairAgent(max_attempts=3, use_rag=True)
+        agent = RepairAgent(max_attempts=3, use_rag=True, use_web_search=True)
         print("\n✅ Agente inicializado com sucesso!")
         
         # Mostra status do RAG
         if agent.retriever:
-            print("\n📚 RAG ativo - usando base de conhecimento em PDFs\n")
+            print("📚 RAG ativo - usando base de conhecimento em PDFs")
         else:
-            print("\n⚠️  RAG desativado - agente usando apenas conhecimento do LLM\n")
+            print("⚠️  RAG desativado")
         
-        print("\n💡 Dica: O agente tentará ajudá-lo até 3 vezes antes de sugerir um profissional")
+        # Mostra status da busca web
+        if agent.web_search:
+            print("🌐 Busca web ativa - usando DuckDuckGo como fallback")
+        else:
+            print("⚠️  Busca web desativada")
+        
+        print("\n💡 O agente busca primeiro nos PDFs, depois na internet se necessário")
+        print("💡 Tentará ajudá-lo até 3 vezes antes de sugerir um profissional")
         print("\n📝 Comandos: 'sair' para encerrar | 'novo' para um novo problema\n")
         
         while True:

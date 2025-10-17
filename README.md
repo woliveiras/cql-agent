@@ -4,13 +4,21 @@ Agente de IA especializado em ajudar com pequenos reparos residenciais, constru�
 
 ## 📋 Fases do Projeto
 
-### Fase 1 - Agente Básico
+### Fase 1 - Agente Básico ✅
 
 Agente básico que responde perguntas usando modelo LLM local.
 
-### Fase 2 - RAG
+### Fase 2 - RAG ✅
 
 Sistema de recuperação de informações de PDFs com ChromaDB.
+
+### Fase 3 - Web Search ✅
+
+Busca web com DuckDuckGo como fallback quando RAG não encontra informações.
+
+### Fase 4 - OpenWebUI (Em breve)
+
+Interface web via OpenWebUI com API Flask.
 
 ### ✨ Funcionalidades
 
@@ -33,6 +41,14 @@ Sistema de recuperação de informações de PDFs com ChromaDB.
 - 💾 Armazenamento vetorial com ChromaDB
 - 🎯 Respostas baseadas em manuais específicos
 - ⚡ Embeddings locais com Ollama
+
+#### Fase 3 (Web Search)
+
+- 🌐 Busca web com DuckDuckGo
+- 🔄 Fallback automático: RAG → Web → LLM
+- 🆓 Completamente gratuito (sem API keys)
+- 🇧🇷 Resultados em português (região br-pt)
+- 🔒 Privacidade mantida (DuckDuckGo não rastreia)
 
 ## 🚀 Como usar
 
