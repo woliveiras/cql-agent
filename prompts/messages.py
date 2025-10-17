@@ -29,4 +29,4 @@ Você fez um bom esforço tentando resolver sozinho! Se tiver outro problema no 
 
 AMBIGUOUS_FEEDBACK_MESSAGE = """⚠️ Não entendi sua resposta. 
 
-O problema foi resolvido? Por favor, responda apenas com 'sim' ou 'não'."""
+O problema foi resolvido? 'sim' ou 'não'."""

@@ -1,6 +1,7 @@
 """
 Agente de IA para Reparos Residenciais
-Agente básico que responde perguntas sobre reparos residenciais usando modelos locais
+Agente com RAG que responde perguntas sobre reparos residenciais usando modelos locais
+e uma base de conhecimento em PDFs
 """
 
 from langchain_ollama import ChatOllama
@@ -8,6 +9,7 @@ from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from enum import Enum
+import os
 
 from prompts import (
     BASE_SYSTEM_PROMPT,
@@ -19,6 +21,8 @@ from prompts import (
     AMBIGUOUS_FEEDBACK_MESSAGE
 )
 
+from rag import VectorStoreManager, DocumentRetriever
+
 
 class ConversationState(Enum):
     """Estados da conversação"""
@@ -29,7 +33,7 @@ class ConversationState(Enum):
 
 
 class RepairAgent:
-    """Agente especializado em reparos residenciais com acompanhamento de tentativas"""
+    """Agente especializado em reparos residenciais com RAG e acompanhamento de tentativas"""
     
     def __init__(
         self,
@@ -37,7 +41,9 @@ class RepairAgent:
         temperature: float = 0.3,
         num_predict: int = 500,
         base_url: str = "http://localhost:11434",
-        max_attempts: int = 3
+        max_attempts: int = 3,
+        use_rag: bool = True,
+        chroma_db_path: str = "./chroma_db"
     ):
         """
         Inicializa o agente de reparos residenciais
@@ -48,6 +54,8 @@ class RepairAgent:
             num_predict: Limita tokens de resposta
             base_url: URL do servidor Ollama, localhost:11434 por padrão
             max_attempts: Número máximo de tentativas antes de sugerir profissional
+            use_rag: Se True, usa RAG para buscar documentos relevantes
+            chroma_db_path: Caminho para o banco de dados ChromaDB
         """
         self.llm = ChatOllama(
             model=model_name,
@@ -60,10 +68,47 @@ class RepairAgent:
         self.conversation_history: List = []
         self.current_attempt = 0
         self.state = ConversationState.NEW_PROBLEM
+        self.use_rag = use_rag
+        
+        # Inicializa RAG se disponível
+        self.retriever: Optional[DocumentRetriever] = None
+        if use_rag and os.path.exists(chroma_db_path):
+            try:
+                vectorstore_manager = VectorStoreManager(
+                    persist_directory=chroma_db_path,
+                    ollama_base_url=base_url
+                )
+                # Carrega o vectorstore existente
+                vectorstore = vectorstore_manager.load_vectorstore()
+                if vectorstore is None:
+                    raise ValueError("Não foi possível carregar o vector store")
+                
+                self.retriever = DocumentRetriever(
+                    vectorstore_manager=vectorstore_manager,
+                    k=3,
+                    relevance_threshold=0.7
+                )
+                print("✅ RAG inicializado com sucesso!")
+            except Exception as e:
+                print(f"⚠️  RAG não disponível: {e}")
+                self.retriever = None
+        elif use_rag:
+            print(f"⚠️  Base de conhecimento não encontrada em {chroma_db_path}")
+            print("   Execute: uv run scripts/setup_rag.py")
     
-    def _get_system_prompt(self) -> str:
-        """Retorna o prompt de sistema apropriado baseado no estado"""
+    def _get_system_prompt(self, context: Optional[str] = None) -> str:
+        """
+        Retorna o prompt de sistema apropriado baseado no estado
+        
+        Args:
+            context: Contexto adicional do RAG (se disponível)
+        """
         prompt = BASE_SYSTEM_PROMPT
+        
+        # Adiciona contexto do RAG se disponível
+        if context:
+            prompt += f"\n\n## 📚 Informações da Base de Conhecimento:\n{context}\n"
+            prompt += "\nUse essas informações para fornecer uma resposta mais precisa e detalhada.\n"
         
         if self.state == ConversationState.NEW_PROBLEM:
             prompt += NEW_PROBLEM_PROMPT
@@ -135,12 +180,26 @@ class RepairAgent:
         if self.state == ConversationState.MAX_ATTEMPTS:
             return get_max_attempts_message(self.max_attempts)
         
+        # Mostra mensagem de processamento
+        print("🤖 Agente: Processando...", end="\r", flush=True)
+        
+        # Busca contexto relevante no RAG (apenas para novas perguntas)
+        context = None
+        if self.retriever and self.state == ConversationState.NEW_PROBLEM:
+            try:
+                context, has_relevant = self.retriever.retrieve_and_format(user_message)
+                if has_relevant:
+                    print("\n📚 Encontrei informações relevantes na base de conhecimento...\n")
+            except Exception as e:
+                print(f"⚠️  Erro ao buscar documentos: {e}")
+                context = None
+        
         # Adiciona mensagem do usuário ao histórico
         self.conversation_history.append(HumanMessage(content=user_message))
         
         # Prepara as mensagens para o LLM
         messages = [
-            SystemMessage(content=self._get_system_prompt()),
+            SystemMessage(content=self._get_system_prompt(context=context)),
             *self.conversation_history
         ]
         
@@ -179,8 +238,15 @@ def main():
     print("\nInicializando o agente...")
     
     try:
-        agent = RepairAgent(max_attempts=3)
-        print("\n\n✅ Agente inicializado com sucesso!")
+        agent = RepairAgent(max_attempts=3, use_rag=True)
+        print("\n✅ Agente inicializado com sucesso!")
+        
+        # Mostra status do RAG
+        if agent.retriever:
+            print("\n📚 RAG ativo - usando base de conhecimento em PDFs\n")
+        else:
+            print("\n⚠️  RAG desativado - agente usando apenas conhecimento do LLM\n")
+        
         print("\n💡 Dica: O agente tentará ajudá-lo até 3 vezes antes de sugerir um profissional")
         print("\n📝 Comandos: 'sair' para encerrar | 'novo' para um novo problema\n")
         
@@ -201,7 +267,6 @@ def main():
                 continue
             
             # Processar mensagem
-            print("\n🤖 Agente: Processando...", end="\r")
             response = agent.chat(user_input)
             print("🤖 Agente:", response)
             
@@ -216,6 +281,7 @@ def main():
         print("\n⚠️  Certifique-se de que o Ollama está rodando:")
         print("   docker-compose up -d")
         print("   docker exec -it ollama ollama pull qwen2.5:3b")
+        print("   docker exec -it ollama ollama pull nomic-embed-text")
 
 
 if __name__ == "__main__":
