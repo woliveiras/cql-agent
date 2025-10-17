@@ -1,0 +1,10 @@
+[project]
+name = "cql-agent"
+version = "0.1.0"
+description = "AI Agent for Home Repairs"
+requires-python = ">=3.13"
+dependencies = [
+    "langchain>=0.3.27",
+    "langchain-ollama>=0.3.10",
+    "pydantic>=2.12.2",
+]
