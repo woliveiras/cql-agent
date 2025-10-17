@@ -20,6 +20,9 @@ wheels/
 .installed.cfg
 *.egg
 
+# Prompts cache
+prompts/__pycache__/
+
 # Virtual Environment
 .venv/
 venv/

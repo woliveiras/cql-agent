@@ -102,6 +102,12 @@ O problema foi resolvido? Responda com 'sim' ou 'não'.
 ```text
 cql-agent/
 ├── agent.py              # Código principal do agente
+├── prompts/              # Módulo de prompts organizados
+│   ├── __init__.py       # Exporta todos os prompts
+│   ├── base.py           # Prompt base do sistema
+│   ├── states.py         # Prompts por estado
+│   ├── messages.py       # Mensagens de resposta
+│   └── README.md         # Documentação dos prompts
 ├── docker-compose.yml    # Configuração do Ollama
 ├── pyproject.toml        # Dependências do projeto
 ├── uv.lock              # Lock file das dependências

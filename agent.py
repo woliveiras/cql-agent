@@ -9,6 +9,16 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 from enum import Enum
 
+from prompts import (
+    BASE_SYSTEM_PROMPT,
+    NEW_PROBLEM_PROMPT,
+    get_waiting_feedback_prompt,
+    get_max_attempts_prompt,
+    SUCCESS_MESSAGE,
+    get_max_attempts_message,
+    AMBIGUOUS_FEEDBACK_MESSAGE
+)
+
 
 class ConversationState(Enum):
     """Estados da conversação"""
@@ -50,41 +60,19 @@ class RepairAgent:
         self.conversation_history: List = []
         self.current_attempt = 0
         self.state = ConversationState.NEW_PROBLEM
-        
-        self.base_system_prompt = """Você é um assistente especializado em reparos residenciais.
-Seu objetivo é ajudar as pessoas a resolver pequenos problemas em suas casas.
-
-IMPORTANTE: Responda de forma DIRETA e CONCISA, sem mostrar seu raciocínio interno.
-
-Você deve:
-- Fornecer instruções claras e passo a passo
-- Alertar sobre possíveis perigos e precauções de segurança quando necessário
-- Ser educado, prestativo e paciente
-- Usar linguagem simples e acessível
-- Responder de forma objetiva e rápida"""
     
     def _get_system_prompt(self) -> str:
         """Retorna o prompt de sistema apropriado baseado no estado"""
-        prompt = self.base_system_prompt
+        prompt = BASE_SYSTEM_PROMPT
         
         if self.state == ConversationState.NEW_PROBLEM:
-            prompt += """\n\nAPÓS fornecer a solução completa, SEMPRE termine sua resposta com:
-
-"O problema foi resolvido? Responda com 'sim' ou 'não'."
-
-NUNCA sugira chamar um profissional na primeira tentativa."""
+            prompt += NEW_PROBLEM_PROMPT
         
         elif self.state == ConversationState.WAITING_FEEDBACK:
             if self.current_attempt < self.max_attempts:
-                prompt += f"""\n\nO usuário tentou a solução anterior mas não funcionou (tentativa {self.current_attempt}/{self.max_attempts}).
-Forneça uma NOVA abordagem diferente ou dicas adicionais.
-Seja encorajador e termine perguntando:
-
-"Essa solução funcionou? Responda com 'sim' ou 'não'." """
+                prompt += get_waiting_feedback_prompt(self.current_attempt, self.max_attempts)
             else:
-                prompt += f"""\n\nO usuário já tentou {self.max_attempts} vezes sem sucesso.
-Agradeça o esforço e sugira educadamente buscar um profissional qualificado.
-Explique que alguns problemas podem ser mais complexos e necessitam equipamento ou experiência especializada."""
+                prompt += get_max_attempts_prompt(self.max_attempts)
         
         return prompt
     
@@ -133,9 +121,7 @@ Explique que alguns problemas podem ser mais complexos e necessitam equipamento 
         if self.state == ConversationState.WAITING_FEEDBACK:
             if self._is_positive_feedback(user_message):
                 self.state = ConversationState.RESOLVED
-                return """🎉 Que ótimo que deu certo! Fico feliz em ter ajudado!
-
-Se precisar de ajuda com outro reparo, é só me chamar. Boa sorte e até a próxima! 👋"""
+                return SUCCESS_MESSAGE
             
             elif self._is_negative_feedback(user_message):
                 self.current_attempt += 1
@@ -143,20 +129,11 @@ Se precisar de ajuda com outro reparo, é só me chamar. Boa sorte e até a pró
                     self.state = ConversationState.MAX_ATTEMPTS
             else:
                 # Feedback ambíguo - pede clarificação
-                return """⚠️ Não entendi sua resposta. 
-
-O problema foi resolvido? Por favor, responda apenas com 'sim' ou 'não'."""
+                return AMBIGUOUS_FEEDBACK_MESSAGE
         
         # Se chegou ao máximo de tentativas
         if self.state == ConversationState.MAX_ATTEMPTS:
-            return f"""Entendo sua frustração. Já tentamos {self.max_attempts} abordagens diferentes e o problema persiste.
-
-Neste ponto, recomendo que você procure um profissional qualificado. Alguns problemas podem ser mais complexos do que parecem e podem necessitar:
-- Ferramentas especializadas
-- Conhecimento técnico avançado
-- Inspeção presencial para diagnóstico correto
-
-Você fez um bom esforço tentando resolver sozinho! Se tiver outro problema no futuro, estarei aqui para ajudar. 🔧"""
+            return get_max_attempts_message(self.max_attempts)
         
         # Adiciona mensagem do usuário ao histórico
         self.conversation_history.append(HumanMessage(content=user_message))
