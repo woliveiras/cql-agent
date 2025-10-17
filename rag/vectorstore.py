@@ -126,7 +126,7 @@ class VectorStoreManager:
         self,
         query: str,
         k: int = 3,
-        score_threshold: float = 0.0
+        score_threshold: float = 1.0
     ) -> List[Document]:
         """
         Busca documentos similares à query
@@ -134,7 +134,9 @@ class VectorStoreManager:
         Args:
             query: Texto da busca
             k: Número de documentos a retornar
-            score_threshold: Threshold mínimo de similaridade
+            score_threshold: Threshold máximo de distância (menor = mais similar)
+                           ChromaDB retorna distâncias, então usamos <=
+                           Valores típicos: 0.3 (muito similar) a 1.0 (similar)
             
         Returns:
             Lista de documentos mais similares
@@ -145,10 +147,10 @@ class VectorStoreManager:
         # Buscar com scores
         docs_with_scores = self.vectorstore.similarity_search_with_score(query, k=k)
         
-        # Filtrar por threshold
+        # Filtrar por threshold (ChromaDB usa distância: menor = mais similar)
         filtered_docs = [
             doc for doc, score in docs_with_scores
-            if score >= score_threshold
+            if score <= score_threshold
         ]
         
         return filtered_docs

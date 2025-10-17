@@ -14,7 +14,7 @@ class DocumentRetriever:
         self,
         vectorstore_manager: VectorStoreManager,
         k: int = 3,
-        relevance_threshold: float = 0.7
+        relevance_threshold: float = 0.8
     ):
         """
         Inicializa o retriever
@@ -22,7 +22,11 @@ class DocumentRetriever:
         Args:
             vectorstore_manager: Gerenciador do vector store
             k: Número de documentos a recuperar
-            relevance_threshold: Threshold mínimo de relevância (0-1)
+            relevance_threshold: Threshold máximo de distância (menor = mais similar)
+                               Valores recomendados:
+                               - 0.5: Muito similar (restritivo)
+                               - 0.8: Similar (balanceado)
+                               - 1.0: Relativamente similar (permissivo)
         """
         self.vectorstore_manager = vectorstore_manager
         self.k = k

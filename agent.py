@@ -86,7 +86,7 @@ class RepairAgent:
                 self.retriever = DocumentRetriever(
                     vectorstore_manager=vectorstore_manager,
                     k=3,
-                    relevance_threshold=0.7
+                    relevance_threshold=0.8
                 )
                 print("✅ RAG inicializado com sucesso!")
             except Exception as e:
