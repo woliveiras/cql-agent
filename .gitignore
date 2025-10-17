@@ -50,7 +50,7 @@ Thumbs.db
 *.db
 *.sqlite3
 
-# ChromaDB (para fases futuras)
+# ChromaDB
 chroma_db/
 .chroma/
 
@@ -58,9 +58,12 @@ chroma_db/
 .env
 .env.local
 
-# PDFs (para fase 2)
-pdfs/
+# PDFs - apenas ignorar os arquivos, não a pasta
+pdfs/*.pdf
 
-# Flask (para fase 4)
+# RAG cache
+rag/__pycache__/
+
+# Flask
 instance/
 .pytest_cache/

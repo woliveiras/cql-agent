@@ -2,11 +2,19 @@
 
 Agente de IA especializado em ajudar com pequenos reparos residenciais, construído com LangChain, Ollama e Python.
 
-## 📋 Fase 1 - Agente Básico
+## 📋 Fases do Projeto
 
-Nesta primeira fase, implementamos um agente básico que responde perguntas sobre reparos residenciais usando um modelo LLM local via Ollama.
+### Fase 1 - Agente Básico
+
+Agente básico que responde perguntas usando modelo LLM local.
+
+### Fase 2 - RAG
+
+Sistema de recuperação de informações de PDFs com ChromaDB.
 
 ### ✨ Funcionalidades
+
+#### Fase 1 (Agente Básico)
 
 - 🤖 Chat interativo para perguntas sobre reparos
 - 🏠 Especializado em problemas residenciais
@@ -17,6 +25,14 @@ Nesta primeira fase, implementamos um agente básico que responde perguntas sobr
 - ✅ Validação de feedback com respostas "sim" ou "não"
 - 📝 Histórico de conversação mantido para contexto
 - 🎯 Detecção automática de sucesso/falha
+
+#### Fase 2 (RAG)
+
+- 📚 Base de conhecimento a partir de PDFs
+- 🔍 Busca semântica em documentos
+- 💾 Armazenamento vetorial com ChromaDB
+- 🎯 Respostas baseadas em manuais específicos
+- ⚡ Embeddings locais com Ollama
 
 ## 🚀 Como usar
 
@@ -32,8 +48,21 @@ Nesta primeira fase, implementamos um agente básico que responde perguntas sobr
 # Subir o container do Ollama
 docker-compose up -d
 
-# Baixar o modelo (primeira vez)
+# Baixar os modelos (primeira vez)
 docker exec -it ollama ollama pull qwen2.5:3b
+docker exec -it ollama ollama pull nomic-embed-text
+```
+
+### 2.5. Configurar RAG (Opcional - Fase 2)
+
+```bash
+# 1. Adicionar PDFs na pasta pdfs/
+# Coloque manuais sobre reparos residenciais
+
+# 2. Processar PDFs e criar base de conhecimento
+uv run scripts/setup_rag.py
+
+# Isso irá criar o banco vetorial em chroma_db/
 ```
 
 ### 3. Instalar dependências
@@ -103,20 +132,30 @@ O problema foi resolvido? Responda com 'sim' ou 'não'.
 cql-agent/
 ├── agent.py              # Código principal do agente
 ├── prompts/              # Módulo de prompts organizados
-│   ├── __init__.py       # Exporta todos os prompts
-│   ├── base.py           # Prompt base do sistema
-│   ├── states.py         # Prompts por estado
-│   ├── messages.py       # Mensagens de resposta
-│   └── README.md         # Documentação dos prompts
+│   ├── __init__.py
+│   ├── base.py
+│   ├── states.py
+│   ├── messages.py
+│   └── README.md
+├── rag/                  # Módulo RAG
+│   ├── __init__.py
+│   ├── loader.py         # Carrega e processa PDFs
+│   ├── vectorstore.py    # Gerencia ChromaDB
+│   └── retriever.py      # Busca documentos
+├── scripts/              # Scripts auxiliares
+│   └── setup_rag.py      # Processa PDFs e cria base
+├── pdfs/                 # PDFs de conhecimento (adicionar aqui)
+│   └── README.md
+├── chroma_db/            # Base vetorial (gerado automaticamente)
 ├── docker-compose.yml    # Configuração do Ollama
-├── pyproject.toml        # Dependências do projeto
-├── uv.lock              # Lock file das dependências
-└── README.md            # Este arquivo
+├── pyproject.toml        # Dependências
+└── README.md             # Este arquivo
 ```
 
 ## 🔄 Próximas Fases
 
-- **Fase 2**: RAG com base de conhecimento (PDFs)
+- ✅ **Fase 1**: Agente básico (Concluída)
+- 🚀 **Fase 2**: RAG com base de conhecimento (Em progresso)
 - **Fase 3**: Integração com DuckDuckGo para busca na internet
 - **Fase 4**: API Flask e integração com OpenWebUI
 
