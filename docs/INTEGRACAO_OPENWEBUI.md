@@ -5,6 +5,7 @@ Este documento explica como integrar o web server Flask com o OpenWebUI usando P
 ## 📋 Índice
 
 - [Como Funciona](#como-funciona)
+- [Sistema de Sessão Persistente](#sistema-de-sessão-persistente)
 - [Configuração Inicial](#configuração-inicial)
 - [Usando a Pipe Function](#usando-a-pipe-function)
 - [Modelos Disponíveis](#modelos-disponíveis)
@@ -37,6 +38,49 @@ A integração usa o padrão **Pipe Function** do OpenWebUI:
 5. **Flask API** retorna resposta em JSON
 6. **Pipe Function** formata e retorna para OpenWebUI
 7. **OpenWebUI** exibe para o usuário
+
+---
+
+## 🔐 Sistema de Sessão Persistente
+
+A Pipe Function implementa um sistema inteligente de sessões para manter o contexto da conversação:
+
+### Como Funciona
+
+1. **Primeira mensagem**: Ao iniciar uma conversa, a Pipe gera um UUID único (8 caracteres)
+2. **Identificador de sessão**: Formato `openwebui-{uuid}` (ex: `openwebui-a1b2c3d4`)
+3. **Rastreamento**: O session_id é inserido na primeira resposta como `[SESSÃO: openwebui-a1b2c3d4]`
+4. **Persistência**: Nas mensagens seguintes, a Pipe procura esse identificador nas mensagens anteriores do assistant
+5. **Contexto mantido**: Todas as mensagens subsequentes usam o mesmo session_id, mantendo o contexto no agente
+
+### Exemplo Prático
+
+```text
+👤 Usuário: Como consertar uma torneira pingando?
+
+🤖 Agente: Para consertar uma torneira pingando, siga estes passos:
+1. Feche o registro de água...
+[SESSÃO: openwebui-a1b2c3d4]
+
+👤 Usuário: E se não tiver o-ring?
+
+🤖 Agente: Você pode comprar o-ring em lojas de ferragens...
+(usa automaticamente session_id: openwebui-a1b2c3d4)
+```
+
+### Benefícios
+
+- ✅ **Contexto preservado**: O agente lembra das tentativas anteriores
+- ✅ **Sem configuração**: Funciona automaticamente
+- ✅ **Múltiplas conversas**: Cada chat tem seu próprio session_id
+- ✅ **Rastreável**: Você pode ver o session_id na primeira resposta (apenas para debug)
+
+### Para Desenvolvedores
+
+O session_id pode ser usado para:
+- Debugar conversações específicas
+- Rastrear logs na API Flask
+- Resetar sessões específicas via API: `DELETE /api/v1/chat/reset/{session_id}`
 
 ---
 
@@ -154,7 +198,7 @@ A Pipe Function expõe **3 modelos virtuais**:
 
 ### 2. **Repair Agent (RAG Only)** 📚
 
-- **ID**: `repair-agent-rag-only`
+- **ID**: `repair-agent-rag`
 - **Recursos**: Apenas RAG + LLM (sem internet)
 - **Melhor para**: Perguntas que estão nos PDFs de documentação
 

@@ -2,27 +2,7 @@
 
 Agente de IA especializado em ajudar com pequenos reparos residenciais, construído com LangChain, Ollama e Python.
 
-## 📋 Fases do Projeto
-
-### Fase 1 - Agente Básico ✅
-
-Agente básico que responde perguntas usando modelo LLM local.
-
-### Fase 2 - RAG ✅
-
-Sistema de recuperação de informações de PDFs com ChromaDB.
-
-### Fase 3 - Web Search ✅
-
-Busca web com DuckDuckGo como fallback quando RAG não encontra informações.
-
-### Fase 4 - OpenWebUI + API REST ✅
-
-Interface web via OpenWebUI com API Flask documentada (Swagger).
-
-### ✨ Funcionalidades
-
-#### Fase 1 (Agente Básico)
+## ✨ Funcionalidades
 
 - 🤖 Chat interativo para perguntas sobre reparos
 - 🏠 Especializado em problemas residenciais
@@ -33,24 +13,15 @@ Interface web via OpenWebUI com API Flask documentada (Swagger).
 - ✅ Validação de feedback com respostas "sim" ou "não"
 - 📝 Histórico de conversação mantido para contexto
 - 🎯 Detecção automática de sucesso/falha
-
-#### Fase 2 (RAG)
-
 - 📚 Base de conhecimento a partir de PDFs
 - 🔍 Busca semântica em documentos
 - 💾 Armazenamento vetorial com ChromaDB
 - 🎯 Respostas baseadas em manuais específicos
 - ⚡ Embeddings locais com Ollama
-
-#### Fase 3 (Web Search)
-
 - 🌐 Busca web com DuckDuckGo
 - 🔄 Fallback automático: RAG → Web → LLM
 - 🆓 Completamente gratuito (sem API keys)
 - 🇧🇷 Resultados em português (região br-pt)
-
-#### Fase 4 (API + OpenWebUI)
-
 - 🌐 API REST com Flask
 - 📖 Documentação Swagger automática
 - 🔌 Pipe Function para OpenWebUI
@@ -78,7 +49,7 @@ docker exec -it ollama ollama pull qwen2.5:3b
 docker exec -it ollama ollama pull nomic-embed-text
 ```
 
-### 2.5. Configurar RAG (Opcional - Fase 2)
+### 2.5. Configurar RAG (Opcional, mas recomendado)
 
 ```bash
 # 1. Adicionar PDFs na pasta pdfs/
@@ -108,7 +79,7 @@ source .venv/bin/activate
 uv run agent.py
 ```
 
-#### Opção 2: API REST (Fase 4)
+#### Opção 2: API REST
 
 ```bash
 # Iniciar API Flask
@@ -131,7 +102,19 @@ docker-compose up -d
 # http://localhost:8080
 ```
 
+Em ambiente local, você pode usar a Pipe Function integrada ao OpenWebUI e desabilitar a autenticação para facilitar os testes.
+
+Para desabilitar autenticação, edite o arquivo `docker-compose.yml` e defina:
+
+```yaml
+  - WEBUI_AUTH=false
+```
+
+Os detalhes de uso de Pipe Function estão na documentação: [Integração com OpenWebUI](docs/INTEGRACAO_OPENWEBUI.md)
+
 ## 💬 Exemplo de uso
+
+Exemplo de interação com o agente via CLI:
 
 ```bash
 ============================================================
@@ -175,6 +158,22 @@ O problema foi resolvido? Responda com 'sim' ou 'não'.
 - **Pydantic** - Validação de dados
 - **Ollama** - Execução local de modelos LLM
 - **Docker** - Containerização do Ollama
+- **Flask** - Framework web para API REST
+- **Flask-RESTX** - Documentação Swagger automática
+- **ChromaDB** - Banco de dados vetorial para RAG
+- **DuckDuckGo** - Busca web gratuita e privada
+
+## 💡 Boas Práticas do Código
+
+Este projeto segue boas práticas de desenvolvimento:
+
+- ✅ **Código limpo**: Comentários apenas onde agregam valor real
+- ✅ **Type hints**: Tipagem estática com Pydantic
+- ✅ **Documentação**: Docstrings significativas em funções principais
+- ✅ **Modularização**: Código organizado em módulos (prompts, rag, tools, api)
+- ✅ **Validação**: Validação de entrada/saída com Pydantic
+- ✅ **Logging**: Sistema de logs estruturado
+- ✅ **Containerização**: Deploy completo com Docker Compose
 
 ## 📁 Estrutura do Projeto
 
@@ -195,7 +194,7 @@ cql-agent/
 ├── tools/                # Ferramentas do agente
 │   ├── __init__.py
 │   └── web_search.py     # Busca web (DuckDuckGo)
-├── api/                  # API REST (Fase 4)
+├── api/                  # API REST
 │   ├── __init__.py
 │   └── app.py            # Flask API + Swagger
 ├── openwebui/            # Integração OpenWebUI
@@ -203,10 +202,6 @@ cql-agent/
 ├── scripts/              # Scripts auxiliares
 │   └── setup_rag.py      # Processa PDFs e cria base
 ├── docs/                 # Documentação detalhada
-│   ├── FASE_2_COMPLETA.md
-│   ├── FASE_3_COMPLETA.md
-│   ├── FASE_4_COMPLETA.md
-│   └── README_API.md
 ├── pdfs/                 # PDFs de conhecimento (adicionar aqui)
 │   └── README.md
 ├── chroma_db/            # Base vetorial (gerado automaticamente)
@@ -216,20 +211,6 @@ cql-agent/
 ├── pyproject.toml        # Dependências
 └── README.md             # Este arquivo
 ```
-
-## 🔄 Status do Projeto
-
-- ✅ **Fase 1**: Agente básico (Concluída)
-- ✅ **Fase 2**: RAG com base de conhecimento (Concluída)
-- ✅ **Fase 3**: Busca web com DuckDuckGo (Concluída)
-- ✅ **Fase 4**: API REST + OpenWebUI (Concluída)
-
-## 📚 Documentação Adicional
-
-- [API REST](docs/README_API.md) - Guia completo da API Flask
-- [Fase 2 - RAG](docs/FASE_2_COMPLETA.md) - Implementação do RAG
-- [Fase 3 - Web Search](docs/FASE_3_COMPLETA.md) - Busca web
-- [Fase 4 - OpenWebUI](docs/FASE_4_COMPLETA.md) - API + Interface web
 
 ## 🐛 Troubleshooting
 

@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # Script de setup para o projeto de Agente de Reparos Residenciais
-# Fase 1
 
 set -e
 

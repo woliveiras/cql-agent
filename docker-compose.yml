@@ -1,5 +1,4 @@
 services:
-  # Ollama - Modelo LLM local
   ollama:
     image: ollama/ollama:latest
     container_name: repair-agent-ollama
@@ -11,7 +10,6 @@ services:
       - repair-network
     restart: unless-stopped
 
-  # Flask API - Backend do agente
   api:
     build:
       context: .
@@ -32,7 +30,6 @@ services:
       - repair-network
     restart: unless-stopped
 
-  # OpenWebUI - Interface web
   openwebui:
     image: ghcr.io/open-webui/open-webui:main
     container_name: repair-agent-openwebui
@@ -40,7 +37,7 @@ services:
       - "8080:8080"
     environment:
       - OLLAMA_BASE_URL=http://ollama:11434
-      - WEBUI_AUTH=false  # Desabilita autenticação para desenvolvimento
+      - WEBUI_AUTH=false
       - ENABLE_RAG_WEB_SEARCH=true
       - ENABLE_OLLAMA_API=true
     volumes:
