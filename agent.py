@@ -41,7 +41,7 @@ class RepairAgent:
         model_name: str = "qwen2.5:3b",
         temperature: float = 0.3,
         num_predict: int = 500,
-        base_url: str = "http://localhost:11434",
+        base_url: Optional[str] = None,
         max_attempts: int = 3,
         use_rag: bool = True,
         use_web_search: bool = True,
@@ -54,12 +54,16 @@ class RepairAgent:
             model_name: Nome do modelo Ollama a ser usado
             temperature: Controla a criatividade das respostas (0.0 a 1.0)
             num_predict: Limita tokens de resposta
-            base_url: URL do servidor Ollama, localhost:11434 por padrão
+            base_url: URL do servidor Ollama, usa OLLAMA_BASE_URL ou localhost:11434 por padrão
             max_attempts: Número máximo de tentativas antes de sugerir profissional
             use_rag: Se True, usa RAG para buscar documentos relevantes
             use_web_search: Se True, usa busca web quando RAG não encontra informações
             chroma_db_path: Caminho para o banco de dados ChromaDB
         """
+        # Usa variável de ambiente se base_url não foi especificado
+        if base_url is None:
+            base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+        
         self.llm = ChatOllama(
             model=model_name,
             temperature=temperature,
@@ -149,14 +153,22 @@ class RepairAgent:
         """Detecta se a mensagem do usuário indica sucesso"""
         message_lower = message.lower().strip()
         
-        # Respostas diretas
-        if message_lower in ['sim', 's', 'yes', 'y']:
+        # Primeiro verificar se há negação na mensagem
+        has_negation = any(neg in message_lower for neg in ['não', 'nao', 'nope', 'no'])
+        
+        # Se há negação, não é positivo
+        if has_negation:
+            return False
+        
+        # Respostas diretas positivas
+        if message_lower in ['sim', 's', 'yes', 'y', 'ok']:
             return True
         
-        # Frases positivas
+        # Frases positivas (somente se não houver negação)
         positive_phrases = [
             'funcionou', 'deu certo', 'consegui', 'resolveu', 'resolvido',
-            'obrigado', 'valeu', 'sucesso', 'está funcionando'
+            'obrigado', 'valeu', 'sucesso', 'está funcionando', 'perfeito',
+            'ótimo', 'excelente'
         ]
         return any(phrase in message_lower for phrase in positive_phrases)
     
@@ -196,6 +208,10 @@ class RepairAgent:
                 self.current_attempt += 1
                 if self.current_attempt >= self.max_attempts:
                     self.state = ConversationState.MAX_ATTEMPTS
+                # Se ainda há tentativas, marcar que precisa de nova solução
+                else:
+                    # Estado continua WAITING_FEEDBACK mas precisamos de nova resposta
+                    pass
             else:
                 # Feedback ambíguo - pede clarificação
                 return AMBIGUOUS_FEEDBACK_MESSAGE
@@ -251,12 +267,29 @@ class RepairAgent:
         # Adiciona resposta ao histórico
         self.conversation_history.append(AIMessage(content=response.content))
         
+        response_text = response.content
+        
         # Atualiza estado para aguardar feedback após primeira resposta
         if self.state == ConversationState.NEW_PROBLEM:
             self.state = ConversationState.WAITING_FEEDBACK
             self.current_attempt = 1
+            
+            # Garantir que a pergunta de feedback está sempre presente
+            feedback_question = "\n\nO problema foi resolvido? Responda com 'sim' ou 'não'."
+            
+            # Se a resposta não termina com a pergunta, adicionar
+            if not response_text.rstrip().endswith(("'sim' ou 'não'.", "'sim' ou 'não'?", "sim' ou 'não'.")):
+                response_text += feedback_question
         
-        return response.content
+        # Para tentativas subsequentes (WAITING_FEEDBACK), também garantir a pergunta
+        elif self.state == ConversationState.WAITING_FEEDBACK and self.current_attempt < self.max_attempts:
+            feedback_question = "\n\nEssa solução funcionou? Responda com 'sim' ou 'não'."
+            
+            # Se a resposta não termina com a pergunta, adicionar
+            if not response_text.rstrip().endswith(("'sim' ou 'não'.", "'sim' ou 'não'?", "sim' ou 'não'.")):
+                response_text += feedback_question
+        
+        return response_text
     
     def reset(self):
         """Reinicia o agente para um novo problema"""

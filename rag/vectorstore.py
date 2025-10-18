@@ -1,10 +1,10 @@
 """
-Vector Store Manager - Gerencia o ChromaDB e embeddings
+Vector Store Manager - Gerencia o banco vetorial ChromaDB
 """
 
 from pathlib import Path
-from typing import List, Optional
-from langchain.schema import Document
+from typing import List, Optional, Tuple
+from langchain_core.documents import Document
 from langchain_chroma import Chroma
 from langchain_ollama import OllamaEmbeddings
 

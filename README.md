@@ -16,9 +16,9 @@ Sistema de recuperação de informações de PDFs com ChromaDB.
 
 Busca web com DuckDuckGo como fallback quando RAG não encontra informações.
 
-### Fase 4 - OpenWebUI (Em breve)
+### Fase 4 - OpenWebUI + API REST ✅
 
-Interface web via OpenWebUI com API Flask.
+Interface web via OpenWebUI com API Flask documentada (Swagger).
 
 ### ✨ Funcionalidades
 
@@ -48,6 +48,15 @@ Interface web via OpenWebUI com API Flask.
 - 🔄 Fallback automático: RAG → Web → LLM
 - 🆓 Completamente gratuito (sem API keys)
 - 🇧🇷 Resultados em português (região br-pt)
+
+#### Fase 4 (API + OpenWebUI)
+
+- 🌐 API REST com Flask
+- 📖 Documentação Swagger automática
+- 🔌 Pipe Function para OpenWebUI
+- 🐳 Docker Compose para deploy completo
+- 🔄 Gerenciamento de sessões
+- 🎨 Interface web moderna
 - 🔒 Privacidade mantida (DuckDuckGo não rastreia)
 
 ## 🚀 Como usar
@@ -89,12 +98,37 @@ uv sync
 
 ### 4. Executar o agente
 
+#### Opção 1: CLI (Linha de Comando)
+
 ```bash
 # Ativar o ambiente virtual (opcional, uv faz isso automaticamente)
 source .venv/bin/activate
 
 # Executar o agente
 uv run agent.py
+```
+
+#### Opção 2: API REST (Fase 4)
+
+```bash
+# Iniciar API Flask
+uv run python -m api.app
+
+# Acessar documentação Swagger
+# http://localhost:5000/docs
+
+# Testar API
+uv run python test_api.py
+```
+
+#### Opção 3: Docker Compose (Deploy Completo)
+
+```bash
+# Iniciar todos os serviços (Ollama + API + OpenWebUI)
+docker-compose up -d
+
+# Acessar OpenWebUI
+# http://localhost:8080
 ```
 
 ## 💬 Exemplo de uso
@@ -158,22 +192,44 @@ cql-agent/
 │   ├── loader.py         # Carrega e processa PDFs
 │   ├── vectorstore.py    # Gerencia ChromaDB
 │   └── retriever.py      # Busca documentos
+├── tools/                # Ferramentas do agente
+│   ├── __init__.py
+│   └── web_search.py     # Busca web (DuckDuckGo)
+├── api/                  # API REST (Fase 4)
+│   ├── __init__.py
+│   └── app.py            # Flask API + Swagger
+├── openwebui/            # Integração OpenWebUI
+│   └── pipe.py           # Pipe Function
 ├── scripts/              # Scripts auxiliares
 │   └── setup_rag.py      # Processa PDFs e cria base
+├── docs/                 # Documentação detalhada
+│   ├── FASE_2_COMPLETA.md
+│   ├── FASE_3_COMPLETA.md
+│   ├── FASE_4_COMPLETA.md
+│   └── README_API.md
 ├── pdfs/                 # PDFs de conhecimento (adicionar aqui)
 │   └── README.md
 ├── chroma_db/            # Base vetorial (gerado automaticamente)
-├── docker-compose.yml    # Configuração do Ollama
+├── docker-compose.yml    # Deploy completo (Ollama + API + OpenWebUI)
+├── Dockerfile.api        # Docker para API
+├── test_api.py           # Testes da API
 ├── pyproject.toml        # Dependências
 └── README.md             # Este arquivo
 ```
 
-## 🔄 Próximas Fases
+## 🔄 Status do Projeto
 
 - ✅ **Fase 1**: Agente básico (Concluída)
-- 🚀 **Fase 2**: RAG com base de conhecimento (Em progresso)
-- **Fase 3**: Integração com DuckDuckGo para busca na internet
-- **Fase 4**: API Flask e integração com OpenWebUI
+- ✅ **Fase 2**: RAG com base de conhecimento (Concluída)
+- ✅ **Fase 3**: Busca web com DuckDuckGo (Concluída)
+- ✅ **Fase 4**: API REST + OpenWebUI (Concluída)
+
+## 📚 Documentação Adicional
+
+- [API REST](docs/README_API.md) - Guia completo da API Flask
+- [Fase 2 - RAG](docs/FASE_2_COMPLETA.md) - Implementação do RAG
+- [Fase 3 - Web Search](docs/FASE_3_COMPLETA.md) - Busca web
+- [Fase 4 - OpenWebUI](docs/FASE_4_COMPLETA.md) - API + Interface web
 
 ## 🐛 Troubleshooting
 

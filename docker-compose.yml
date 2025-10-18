@@ -1,15 +1,64 @@
-version: '3.8'
-
 services:
+  # Ollama - Modelo LLM local
   ollama:
     image: ollama/ollama:latest
-    container_name: ollama
+    container_name: repair-agent-ollama
     ports:
       - "11434:11434"
     volumes:
       - ollama_data:/root/.ollama
+    networks:
+      - repair-network
     restart: unless-stopped
+
+  # Flask API - Backend do agente
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: repair-agent-api
+    ports:
+      - "5000:5000"
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - FLASK_ENV=production
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./chroma_db:/app/chroma_db
+      - ./pdfs:/app/pdfs:ro
+    depends_on:
+      - ollama
+    networks:
+      - repair-network
+    restart: unless-stopped
+
+  # OpenWebUI - Interface web
+  openwebui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: repair-agent-openwebui
+    ports:
+      - "8080:8080"
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - WEBUI_AUTH=false  # Desabilita autenticação para desenvolvimento
+      - ENABLE_RAG_WEB_SEARCH=true
+      - ENABLE_OLLAMA_API=true
+    volumes:
+      - openwebui_data:/app/backend/data
+      - ./openwebui/pipe.py:/app/backend/pipes/repair_agent_pipe.py:ro
+    depends_on:
+      - ollama
+      - api
+    networks:
+      - repair-network
+    restart: unless-stopped
+
+networks:
+  repair-network:
+    driver: bridge
 
 volumes:
   ollama_data:
+    driver: local
+  openwebui_data:
     driver: local

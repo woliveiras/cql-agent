@@ -1,9 +1,9 @@
 """
-Document Retriever - Busca e recupera documentos relevantes
+Document Retriever - Recupera documentos relevantes do vector store
 """
 
-from typing import List, Optional, Tuple
-from langchain.schema import Document
+from typing import List, Tuple
+from langchain_core.documents import Document
 from .vectorstore import VectorStoreManager
 
 

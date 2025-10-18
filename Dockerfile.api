@@ -1,0 +1,32 @@
+# Dockerfile para a API Flask
+FROM python:3.13-slim
+
+WORKDIR /app
+
+# Instalar dependências do sistema e uv
+RUN apt-get update && apt-get install -y \
+    curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install --no-cache-dir uv
+
+# Copiar arquivos de dependências
+COPY pyproject.toml ./
+
+# Instalar dependências usando uv
+RUN uv pip install --system --no-cache -r pyproject.toml
+
+# Copiar código da aplicação
+COPY agent.py ./
+COPY prompts/ ./prompts/
+COPY rag/ ./rag/
+COPY tools/ ./tools/
+COPY api/ ./api/
+
+# Criar diretórios necessários
+RUN mkdir -p /app/chroma_db /app/pdfs
+
+# Expor porta
+EXPOSE 5000
+
+# Comando para iniciar a API
+CMD ["python", "-m", "api.app"]
