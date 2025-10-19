@@ -82,15 +82,23 @@ uv run agent.py
 #### Opção 2: API REST
 
 ```bash
-# Iniciar API Flask
-uv run python -m api.app
+# Desenvolvimento (com auto-reload)
+uv run flask --app api.app run --debug
+
+# Produção (com Gunicorn)
+uv run gunicorn --config api/gunicorn.conf.py api.app:app
 
 # Acessar documentação Swagger
 # http://localhost:5000/docs
 
-# Testar API
+# Testar API (script automatizado)
+./test_api.sh
+
+# Ou testar manualmente
 uv run python test_api.py
 ```
+
+> 📚 **Guia completo:** Veja [GUIA_DEPLOY.md](docs/GUIA_DEPLOY.md) para mais opções de execução
 
 #### Opção 3: Docker Compose (Deploy Completo)
 
@@ -160,6 +168,7 @@ O problema foi resolvido? Responda com 'sim' ou 'não'.
 - **Docker** - Containerização do Ollama
 - **Flask** - Framework web para API REST
 - **Flask-RESTX** - Documentação Swagger automática
+- **Gunicorn** - Servidor WSGI para produção
 - **ChromaDB** - Banco de dados vetorial para RAG
 - **DuckDuckGo** - Busca web gratuita e privada
 
@@ -202,6 +211,10 @@ cql-agent/
 ├── scripts/              # Scripts auxiliares
 │   └── setup_rag.py      # Processa PDFs e cria base
 ├── docs/                 # Documentação detalhada
+│   ├── GUIA_DEPLOY.md    # Deploy e execução (dev + prod)
+│   ├── GUIA_SWAGGER.md
+│   ├── INTEGRACAO_OPENWEBUI.md
+│   └── QUICK_START_RAG.md
 ├── pdfs/                 # PDFs de conhecimento (adicionar aqui)
 │   └── README.md
 ├── chroma_db/            # Base vetorial (gerado automaticamente)

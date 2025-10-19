@@ -6,7 +6,7 @@ API Flask RESTful para o Agente de Reparos Residenciais, fornecendo endpoints do
 
 ## 🏗️ Arquitetura
 
-```
+```text
 ┌─────────────────┐
 │   Frontend      │
 │  (OpenWebUI)    │
@@ -41,17 +41,74 @@ uv sync
 
 ### 2️⃣ Iniciar a API
 
+#### 🔧 Modo Desenvolvimento
+
 ```bash
-# Modo desenvolvimento
+# Opção 1: Flask development server (com auto-reload)
 uv run python -m api.app
 
-# Ou com Flask diretamente
-uv run flask --app api.app run --debug
+# Opção 2: Flask CLI (recomendado para dev)
+uv run flask --app api.app run --debug --port 5000
+
+# Opção 3: Gunicorn com reload (mais próximo de produção)
+uv run gunicorn --config api/gunicorn.conf.py \
+  --reload \
+  --log-level debug \
+  api.app:app
+```
+
+**Características do modo desenvolvimento:**
+
+- ✅ Auto-reload ao modificar código
+- ✅ Debug detalhado
+- ✅ Stack traces completos
+- ⚠️ Single worker (não otimizado para carga)
+
+#### 🚀 Modo Produção
+
+```bash
+# Opção 1: Gunicorn com configuração otimizada (RECOMENDADO)
+uv run gunicorn --config api/gunicorn.conf.py api.app:app
+
+# Opção 2: Gunicorn com parâmetros personalizados
+uv run gunicorn api.app:app \
+  --workers 4 \
+  --bind 0.0.0.0:5000 \
+  --timeout 30 \
+  --access-logfile - \
+  --error-logfile -
+
+# Opção 3: Docker (produção completa)
+docker-compose up -d api
+```
+
+**Características do modo produção:**
+
+- ✅ Múltiplos workers (baseado em CPU)
+- ✅ Preload da aplicação (memória otimizada)
+- ✅ Graceful restart
+- ✅ Health checks automáticos
+- ✅ Logging estruturado
+- ⚡ Alta performance e concorrência
+
+#### ⚙️ Configuração de Workers
+
+O número de workers é calculado automaticamente:
+
+```text
+workers = (CPU cores × 2) + 1
+```
+
+Você pode sobrescrever via variável de ambiente:
+
+```bash
+# Forçar 8 workers
+GUNICORN_WORKERS=8 uv run gunicorn --config api/gunicorn.conf.py api.app:app
 ```
 
 ### 3️⃣ Acessar Documentação
 
-Abra no navegador: http://localhost:5000/docs
+Abra no navegador: <http://localhost:5000/docs>
 
 ## 📡 Endpoints
 
@@ -60,6 +117,7 @@ Abra no navegador: http://localhost:5000/docs
 Envia uma mensagem para o agente.
 
 **Request:**
+
 ```json
 {
   "message": "Como consertar uma torneira pingando?",
@@ -70,6 +128,7 @@ Envia uma mensagem para o agente.
 ```
 
 **Response:**
+
 ```json
 {
   "response": "Para consertar uma torneira pingando...",
@@ -90,6 +149,7 @@ Envia uma mensagem para o agente.
 Reseta o estado de uma sessão.
 
 **Response:**
+
 ```json
 {
   "message": "Sessão user-123 resetada com sucesso"
@@ -101,6 +161,7 @@ Reseta o estado de uma sessão.
 Lista todas as sessões ativas.
 
 **Response:**
+
 ```json
 {
   "sessions": [
@@ -119,6 +180,7 @@ Lista todas as sessões ativas.
 Health check da API.
 
 **Response:**
+
 ```json
 {
   "status": "healthy",
@@ -130,7 +192,83 @@ Health check da API.
 
 ## 🔧 Configuração
 
-### Variáveis de Ambiente
+### Gunicorn (Servidor de Produção)
+
+O projeto usa Gunicorn como servidor WSGI para produção. As configurações estão em `api/gunicorn.conf.py`:
+
+#### Principais Configurações
+
+| Configuração | Valor Padrão | Descrição |
+|--------------|--------------|-----------|
+| `workers` | `(CPU × 2) + 1` | Número de processos worker |
+| `worker_class` | `sync` | Tipo de worker (sync para Flask) |
+| `timeout` | `30s` | Timeout de requisições |
+| `max_requests` | `1000` | Requests antes de reiniciar worker |
+| `preload_app` | `true` | Carregar app antes de fazer fork |
+
+#### Variáveis de Ambiente
+
+```bash
+# Número de workers (padrão: auto-detect)
+GUNICORN_WORKERS=4
+
+# Habilitar reload automático (dev apenas)
+GUNICORN_RELOAD=true
+
+# Nível de log
+LOG_LEVEL=info  # debug, info, warning, error, critical
+```
+
+#### Lifecycle Hooks
+
+O Gunicorn possui hooks configurados para logging detalhado:
+
+- `on_starting`: Servidor iniciando
+- `when_ready`: Pronto para aceitar conexões
+- `post_fork`: Worker criado
+- `worker_exit`: Worker finalizado
+- `on_exit`: Servidor desligando
+
+#### Health Checks
+
+A API possui health check configurado:
+
+```bash
+# Endpoint
+GET /health
+
+# Resposta
+{
+  "status": "healthy",
+  "service": "repair-agent-api",
+  "version": "1.0.0",
+  "timestamp": "2025-10-19T10:30:00Z"
+}
+
+# Docker health check (configurado no Dockerfile)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3
+```
+
+O health check verifica automaticamente:
+
+- ✅ API está respondendo
+- ✅ Processo está ativo
+- ✅ Porta está acessível
+
+**Monitorar health check:**
+
+```bash
+# Docker
+docker inspect --format='{{.State.Health.Status}}' repair-agent-api
+
+# Curl manual
+curl -f http://localhost:5000/health || echo "API unhealthy"
+
+# Com timeout
+timeout 5 curl -f http://localhost:5000/health
+```
+
+### Variáveis de Ambiente da Aplicação
 
 ```bash
 # URL do Ollama
@@ -164,7 +302,7 @@ agent = RepairAgent(
 
 ### Swagger UI
 
-Acesse http://localhost:5000/docs para:
+Acesse <http://localhost:5000/docs> para:
 
 - ✅ Ver todos os endpoints disponíveis
 - ✅ Testar requisições diretamente no navegador
@@ -233,6 +371,25 @@ docker run -p 5000:5000 \
 ```
 
 ## 🧪 Testes
+
+### Teste Automatizado Completo
+
+```bash
+# Script de teste completo (recomendado)
+./test_api.sh
+
+# Com URL customizada
+API_URL=http://localhost:8000 ./test_api.sh
+```
+
+O script testa:
+
+- ✅ Health check
+- ✅ Documentação Swagger
+- ✅ Endpoint de chat
+- ✅ Listagem de sessões
+- ✅ Reset de sessão
+- ⚡ Performance (10 requisições)
 
 ### Teste Manual
 
@@ -307,6 +464,7 @@ logging.basicConfig(level=logging.INFO)
 ```
 
 Logs incluem:
+
 - Requisições recebidas
 - Erros de processamento
 - Criação/reset de sessões
@@ -338,6 +496,12 @@ Veja `openwebui/pipe.py` para integração completa com OpenWebUI.
 2. Integrar com OpenWebUI
 3. Deploy com Docker Compose
 4. Configurar monitoramento
+
+📚 **Guias Detalhados:**
+
+- [Guia Completo de Deploy](../docs/GUIA_DEPLOY.md) - Desenvolvimento, produção e monitoramento
+- [Integração com OpenWebUI](../docs/INTEGRACAO_OPENWEBUI.md)
+- [Quick Start RAG](../docs/QUICK_START_RAG.md)
 
 ## 🆘 Troubleshooting
 

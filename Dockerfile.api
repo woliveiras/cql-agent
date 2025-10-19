@@ -28,5 +28,13 @@ RUN mkdir -p /app/chroma_db /app/pdfs
 # Expor porta
 EXPOSE 5000
 
-# Comando para iniciar a API
-CMD ["python", "-m", "api.app"]
+ENV PYTHONUNBUFFERED=1 \
+    GUNICORN_WORKERS=4 \
+    GUNICORN_RELOAD=false \
+    LOG_LEVEL=info
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:5000/health || exit 1
+
+CMD ["gunicorn", "--config", "api/gunicorn.conf.py", "api.app:app"]
