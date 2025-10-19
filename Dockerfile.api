@@ -20,6 +20,7 @@ COPY agent.py ./
 COPY prompts/ ./prompts/
 COPY rag/ ./rag/
 COPY tools/ ./tools/
+COPY security/ ./security/
 COPY api/ ./api/
 
 # Criar diretórios necessários

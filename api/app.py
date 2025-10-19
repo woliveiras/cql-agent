@@ -16,6 +16,9 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from agent import RepairAgent
+from security import sanitize_input, ContentGuardrail
+from security.sanitizer import SanitizationError
+from security.guardrails import ContentGuardrailError
 
 # Configuração de logging
 logging.basicConfig(
@@ -43,11 +46,29 @@ ns = api.namespace('chat', description='Operações de conversação com o agent
 
 # Modelos Pydantic para validação
 class ChatRequest(BaseModel):
-    """Modelo de requisição de chat"""
-    message: str = Field(..., min_length=1, max_length=2000, description="Mensagem do usuário")
-    session_id: Optional[str] = Field(default="default", description="ID da sessão para manter contexto")
-    use_rag: Optional[bool] = Field(default=True, description="Usar RAG (base de conhecimento)")
-    use_web_search: Optional[bool] = Field(default=True, description="Usar busca web como fallback")
+    """Modelo de requisição de chat com validação rigorosa"""
+    message: str = Field(
+        ..., 
+        min_length=1, 
+        max_length=4096,
+        description="Mensagem do usuário (1-4096 caracteres)",
+        examples=["Como consertar uma torneira pingando?"]
+    )
+    session_id: Optional[str] = Field(
+        default="default", 
+        min_length=1,
+        max_length=128,
+        pattern=r'^[a-zA-Z0-9_-]+$',
+        description="ID da sessão (alfanumérico, _ e - permitidos)"
+    )
+    use_rag: Optional[bool] = Field(
+        default=True, 
+        description="Usar RAG (base de conhecimento)"
+    )
+    use_web_search: Optional[bool] = Field(
+        default=True, 
+        description="Usar busca web como fallback"
+    )
 
 class ChatResponse(BaseModel):
     """Modelo de resposta de chat"""
@@ -81,6 +102,12 @@ error_model = api.model('Error', {
 # Armazenamento de sessões em memória (em produção, usar Redis ou similar)
 sessions: Dict[str, RepairAgent] = {}
 
+# Inicialização do Content Guardrail (compartilhado entre requisições)
+content_guardrail = ContentGuardrail(
+    use_llm_validation=True,
+    strict_mode=False  # False para não bloquear imediatamente, apenas retornar 400
+)
+
 def get_or_create_agent(session_id: str, use_rag: bool = True, use_web_search: bool = True) -> RepairAgent:
     """Obtém ou cria um agente para a sessão"""
     if session_id not in sessions:
@@ -106,6 +133,45 @@ class ChatEndpoint(Resource):
             # Validação com Pydantic
             data = ChatRequest(**request.json)
             
+            # Sanitização da entrada
+            try:
+                sanitized_message = sanitize_input(data.message)
+            except SanitizationError as e:
+                logger.warning(f"Sanitização falhou: {e}")
+                return {
+                    'error': 'Entrada inválida',
+                    'details': 'A mensagem contém caracteres ou padrões não permitidos'
+                }, 400
+            
+            # Guardrails de conteúdo
+            try:
+                validation_result = content_guardrail.validate(sanitized_message)
+                
+                if not validation_result['is_valid']:
+                    logger.warning(
+                        f"Mensagem bloqueada por guardrail: {validation_result['reason']} "
+                        f"(score: {validation_result['score']:.2f})"
+                    )
+                    return {
+                        'error': 'Conteúdo não permitido',
+                        'details': 'Sou um assistente especializado em reparos residenciais. '
+                                 'Por favor, faça perguntas relacionadas a consertos e manutenção doméstica.'
+                    }, 400
+                
+                # Log do score de relevância
+                logger.info(
+                    f"Mensagem validada (score: {validation_result['score']:.2f}): "
+                    f"{sanitized_message[:50]}..."
+                )
+                
+            except ContentGuardrailError as e:
+                logger.warning(f"Guardrail bloqueou mensagem: {e}")
+                return {
+                    'error': 'Conteúdo não permitido',
+                    'details': 'Sou um assistente especializado em reparos residenciais. '
+                             'Por favor, faça perguntas relacionadas a consertos e manutenção doméstica.'
+                }, 400
+            
             # Obter ou criar agente para sessão
             agent = get_or_create_agent(
                 data.session_id,
@@ -113,9 +179,9 @@ class ChatEndpoint(Resource):
                 data.use_web_search
             )
             
-            # Processar mensagem
-            logger.info(f"Processando mensagem da sessão {data.session_id}: {data.message[:50]}...")
-            response = agent.chat(data.message)
+            # Processar mensagem (usar a mensagem sanitizada)
+            logger.info(f"Processando mensagem da sessão {data.session_id}: {sanitized_message[:50]}...")
+            response = agent.chat(sanitized_message)
             
             # Preparar resposta
             chat_response = ChatResponse(
@@ -126,7 +192,8 @@ class ChatEndpoint(Resource):
                     "rag_enabled": data.use_rag,
                     "web_search_enabled": data.use_web_search,
                     "current_attempt": agent.current_attempt,
-                    "max_attempts": agent.max_attempts
+                    "max_attempts": agent.max_attempts,
+                    "relevance_score": validation_result['score']
                 },
                 timestamp=datetime.now(timezone.utc).isoformat()
             )
@@ -135,17 +202,25 @@ class ChatEndpoint(Resource):
             return chat_response.model_dump(), 200
             
         except ValidationError as e:
-            logger.error(f"Erro de validação: {e}")
+            logger.error(f"Erro de validação Pydantic: {e}")
             return {
                 'error': 'Requisição inválida',
-                'details': str(e)
+                'details': 'Os dados fornecidos não atendem aos requisitos de formato. '
+                         'Verifique se a mensagem tem entre 1 e 4096 caracteres.'
+            }, 400
+            
+        except (SanitizationError, ContentGuardrailError) as e:
+            logger.error(f"Erro de segurança não capturado: {e}")
+            return {
+                'error': 'Entrada inválida',
+                'details': 'A mensagem não atende aos critérios de segurança'
             }, 400
             
         except Exception as e:
             logger.error(f"Erro ao processar mensagem: {e}", exc_info=True)
             return {
                 'error': 'Erro interno do servidor',
-                'details': str(e)
+                'details': 'Ocorreu um erro ao processar sua requisição. Por favor, tente novamente.'
             }, 500
 
 @ns.route('/reset/<string:session_id>')

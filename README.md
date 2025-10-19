@@ -29,6 +29,10 @@ Agente de IA especializado em ajudar com pequenos reparos residenciais, constru�
 - 🔄 Gerenciamento de sessões
 - 🎨 Interface web moderna
 - 🔒 Privacidade mantida (DuckDuckGo não rastreia)
+- 🛡️ Segurança reforçada com sanitização e guardrails
+- ✅ Validação rigorosa de entrada (Pydantic)
+- 🚫 Proteção contra injection (SQL, XSS, Command)
+- 🎯 Guardrails de conteúdo (apenas reparos residenciais)
 
 ## 🚀 Como usar
 
@@ -203,9 +207,16 @@ cql-agent/
 ├── tools/                # Ferramentas do agente
 │   ├── __init__.py
 │   └── web_search.py     # Busca web (DuckDuckGo)
+├── security/             # 🛡️ Módulo de segurança
+│   ├── __init__.py
+│   ├── sanitizer.py      # Sanitização de entrada
+│   ├── guardrails.py     # Validação de conteúdo
+│   ├── test_security.py  # Testes unitários
+│   ├── test_api_security.py  # Testes de integração
+│   └── README.md         # Documentação de segurança
 ├── api/                  # API REST
 │   ├── __init__.py
-│   └── app.py            # Flask API + Swagger
+│   └── app.py            # Flask API + Swagger + Segurança
 ├── openwebui/            # Integração OpenWebUI
 │   └── pipe.py           # Pipe Function
 ├── scripts/              # Scripts auxiliares
@@ -223,6 +234,47 @@ cql-agent/
 ├── test_api.py           # Testes da API
 ├── pyproject.toml        # Dependências
 └── README.md             # Este arquivo
+```
+
+## 🛡️ Segurança
+
+O projeto implementa múltiplas camadas de segurança:
+
+### 1. Validação de Schema (Pydantic)
+
+- Mensagens: 1-4096 caracteres
+- Session ID: alfanumérico com _ e -
+- Validação rigorosa de tipos
+
+### 2. Sanitização de Entrada
+
+- Remove caracteres nulos (`\x00`)
+- Detecta SQL injection
+- Detecta XSS (Cross-Site Scripting)
+- Detecta command injection
+- Previne DoS por repetição
+
+### 3. Guardrails de Conteúdo
+
+- Valida se mensagem é sobre reparos residenciais
+- Bloqueia conteúdo proibido (ilegal, adulto, jailbreak)
+- Score de relevância (0.0 a 1.0)
+- Validação adicional com LLM
+
+### 4. Tratamento de Erros
+
+- Retorna 400 Bad Request para entrada inválida
+- Não vaza detalhes internos
+- Logs detalhados para auditoria
+
+### Testes de Segurança
+
+```bash
+# Testes unitários
+pytest security/test_security.py -v
+
+# Testes de integração (API deve estar rodando)
+python security/test_api_security.py
 ```
 
 ## 🐛 Troubleshooting
