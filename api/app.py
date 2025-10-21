@@ -15,10 +15,10 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from agent import RepairAgent
-from security import sanitize_input, ContentGuardrail
-from security.sanitizer import SanitizationError
-from security.guardrails import ContentGuardrailError
+from agents import RepairAgent
+from .security import sanitize_input, ContentGuardrail
+from .security.sanitizer import SanitizationError
+from .security.guardrails import ContentGuardrailError
 
 # Configuração de logging
 logging.basicConfig(
