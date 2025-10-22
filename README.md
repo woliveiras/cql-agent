@@ -192,48 +192,58 @@ Este projeto segue boas práticas de desenvolvimento:
 
 ```text
 cql-agent/
-├── agent.py              # Código principal do agente
-├── prompts/              # Módulo de prompts organizados
+├── agents/                    # 🤖 Agentes de IA
+│   ├── repair_agent/          # Agente principal de reparos
+│   │   ├── __init__.py
+│   │   ├── agent.py           # Código principal do agente
+│   │   └── prompts/           # Módulo de prompts organizados
+│   │       ├── __init__.py
+│   │       ├── base.py        # Prompts base do sistema
+│   │       ├── states.py      # Estados da conversação
+│   │       ├── messages.py    # Templates de mensagens
+│   │       └── README.md
+│   ├── rag/                   # 📚 Módulo RAG (Retrieval-Augmented Generation)
+│   │   ├── __init__.py
+│   │   ├── loader.py          # Carrega e processa PDFs
+│   │   ├── vectorstore.py     # Gerencia ChromaDB
+│   │   ├── retriever.py       # Busca documentos semânticos
+│   │   └── pdfs/              # PDFs de exemplo
+│   └── tools/                 # 🔧 Ferramentas do agente
+│       ├── __init__.py
+│       └── web_search.py      # Busca web (DuckDuckGo)
+├── api/                       # 🌐 API REST
 │   ├── __init__.py
-│   ├── base.py
-│   ├── states.py
-│   ├── messages.py
+│   ├── app.py                 # Flask API + Swagger
+│   ├── gunicorn.conf.py       # Configuração Gunicorn (produção)
+│   ├── test_api.py            # Testes da API
+│   ├── README.md
+│   └── security/              # 🛡️ Módulo de segurança
+│       ├── __init__.py
+│       ├── sanitizer.py       # Sanitização de entrada
+│       ├── guardrails.py      # Validação de conteúdo com SpaCy
+│       ├── test_security.py   # Testes unitários
+│       ├── test_api_security.py  # Testes de integração
+│       └── README.md          # Documentação de segurança
+├── openwebui/                 # 🎨 Integração OpenWebUI
+│   └── pipe.py                # Pipe Function
+├── scripts/                   # 📜 Scripts auxiliares
+│   └── setup_rag.py           # Processa PDFs e cria base
+├── docs/                      # 📖 Documentação detalhada
+│   ├── GUIA_DEPLOY.md         # Deploy e execução (dev + prod)
+│   ├── GUIA_SWAGGER.md        # Documentação Swagger
+│   ├── INTEGRACAO_OPENWEBUI.md  # Integração com OpenWebUI
+│   └── QUICK_START_RAG.md     # Guia rápido RAG
+├── pdfs/                      # 📄 PDFs de conhecimento (adicionar aqui)
 │   └── README.md
-├── rag/                  # Módulo RAG
-│   ├── __init__.py
-│   ├── loader.py         # Carrega e processa PDFs
-│   ├── vectorstore.py    # Gerencia ChromaDB
-│   └── retriever.py      # Busca documentos
-├── tools/                # Ferramentas do agente
-│   ├── __init__.py
-│   └── web_search.py     # Busca web (DuckDuckGo)
-├── security/             # 🛡️ Módulo de segurança
-│   ├── __init__.py
-│   ├── sanitizer.py      # Sanitização de entrada
-│   ├── guardrails.py     # Validação de conteúdo
-│   ├── test_security.py  # Testes unitários
-│   ├── test_api_security.py  # Testes de integração
-│   └── README.md         # Documentação de segurança
-├── api/                  # API REST
-│   ├── __init__.py
-│   └── app.py            # Flask API + Swagger + Segurança
-├── openwebui/            # Integração OpenWebUI
-│   └── pipe.py           # Pipe Function
-├── scripts/              # Scripts auxiliares
-│   └── setup_rag.py      # Processa PDFs e cria base
-├── docs/                 # Documentação detalhada
-│   ├── GUIA_DEPLOY.md    # Deploy e execução (dev + prod)
-│   ├── GUIA_SWAGGER.md
-│   ├── INTEGRACAO_OPENWEBUI.md
-│   └── QUICK_START_RAG.md
-├── pdfs/                 # PDFs de conhecimento (adicionar aqui)
-│   └── README.md
-├── chroma_db/            # Base vetorial (gerado automaticamente)
-├── docker-compose.yml    # Deploy completo (Ollama + API + OpenWebUI)
-├── Dockerfile.api        # Docker para API
-├── test_api.py           # Testes da API
-├── pyproject.toml        # Dependências
-└── README.md             # Este arquivo
+├── chroma_db/                 # 💾 Base vetorial (gerado automaticamente)
+│   └── chroma.sqlite3
+├── docker-compose.yml         # 🐳 Deploy completo (Ollama + API)
+├── Dockerfile                 # 🐳 Docker para API
+├── setup.sh                   # 🚀 Script de setup inicial
+├── test_api.sh                # 🧪 Script de testes da API
+├── test_security.sh           # 🛡️ Script de testes de segurança
+├── pyproject.toml             # 📦 Dependências Python
+└── README.md                  # 📘 Este arquivo
 ```
 
 ## 🛡️ Segurança
