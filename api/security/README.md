@@ -48,7 +48,6 @@ Classe: `ContentGuardrail`
 from security import ContentGuardrail
 
 guardrail = ContentGuardrail(
-    use_llm_validation=True,  # Usar LLM para validação adicional
     strict_mode=False          # False = retorna dict, True = levanta exceção
 )
 
@@ -64,9 +63,6 @@ if not result['is_valid']:
 
 ```python
 guardrail = ContentGuardrail(
-    use_llm_validation=True,    # Habilitar validação LLM
-    model_name="qwen2.5:3b",    # Modelo para classificação
-    base_url="http://ollama:11434",  # URL do Ollama
     strict_mode=False           # Modo estrito
 )
 ```
@@ -160,7 +156,6 @@ Para produção, recomenda-se:
 ```python
 # Modo strict (levanta exceção imediatamente)
 guardrail = ContentGuardrail(
-    use_llm_validation=True,
     strict_mode=True  # Bloqueia mensagens suspeitas
 )
 

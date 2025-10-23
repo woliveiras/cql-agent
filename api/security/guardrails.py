@@ -3,11 +3,10 @@ Guardrails de conteúdo para validar a intenção do prompt
 Verifica se a mensagem está relacionada ao domínio do agente (reparos residenciais)
 """
 
+import os
 import re
 import logging
-from typing import Dict, List, Optional, Tuple
-from langchain_ollama import ChatOllama
-from langchain_core.messages import SystemMessage, HumanMessage
+from typing import Dict, List, Optional, Tuple, Pattern
 
 logger = logging.getLogger(__name__)
 
@@ -50,8 +49,8 @@ class ContentGuardrail:
         "reparo", "manutenção", "diy", "faça você mesmo"
     ]
     
-    # Padrões de perguntas legítimas
-    QUESTION_PATTERNS = [
+    # Padrões de perguntas legítimas (serão compilados no __init__)
+    QUESTION_PATTERNS_RAW = [
         r"\bcomo\s+(consertar|reparar|arrumar|resolver|instalar|trocar|fixar)",
         r"\bpor\s+que\s+(está|ta|ficou).+(quebrado|vazando|pingando|travando)",
         r"\bo\s+que\s+fazer\s+(quando|se|com)",
@@ -61,8 +60,8 @@ class ContentGuardrail:
         r"\b(dicas|tutorial|passo\s+a\s+passo|instruções)\s+(para|de)"
     ]
     
-    # Tópicos proibidos (off-topic claro)
-    PROHIBITED_TOPICS = [
+    # Tópicos proibidos (off-topic claro) (serão compilados no __init__)
+    PROHIBITED_TOPICS_RAW = [
         # Conteúdo ilegal
         r"\b(bomb|weapon|gun|explosive|drug|hack|crack|pirat|steal|illegal)\b",
         
@@ -85,52 +84,50 @@ class ContentGuardrail:
     
     def __init__(
         self,
-        use_llm_validation: bool = True,
-        model_name: str = "qwen2.5:3b",
-        base_url: Optional[str] = None,
         strict_mode: bool = False
     ):
         """
         Inicializa o guardrail
         
         Args:
-            use_llm_validation: Se True, usa LLM para validação adicional
-            model_name: Nome do modelo para validação LLM
-            base_url: URL base do Ollama
             strict_mode: Se True, aplica validação mais rigorosa
         """
-        self.use_llm_validation = use_llm_validation
         self.strict_mode = strict_mode
         
-        if use_llm_validation:
-            self.llm = ChatOllama(
-                model=model_name,
-                temperature=0.0,  # Deterministico para classificação
-                num_predict=50,   # Resposta curta
-                base_url=base_url or os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
-            )
-        else:
-            self.llm = None
+        # Pré-compila todos os patterns regex para melhor performance
+        self.question_patterns: List[Pattern] = [
+            re.compile(pattern, re.IGNORECASE) 
+            for pattern in self.QUESTION_PATTERNS_RAW
+        ]
+        
+        self.prohibited_patterns: List[Pattern] = [
+            re.compile(pattern, re.IGNORECASE) 
+            for pattern in self.PROHIBITED_TOPICS_RAW
+        ]
+        
+        logger.info(
+            f"ContentGuardrail initialized: strict_mode={strict_mode}, "
+            f"question_patterns={len(self.question_patterns)}, "
+            f"prohibited_patterns={len(self.prohibited_patterns)}"
+        )
     
     def _check_prohibited_content(self, message: str) -> Tuple[bool, Optional[str]]:
         """
-        Verifica se a mensagem contém conteúdo proibido
+        Verifica se a mensagem contém conteúdo proibido usando patterns pré-compilados
         
         Returns:
             (is_valid, reason)
         """
-        message_lower = message.lower()
-        
-        for pattern in self.PROHIBITED_TOPICS:
-            if re.search(pattern, message_lower, re.IGNORECASE):
-                logger.warning(f"Conteúdo proibido detectado: {pattern}")
+        for pattern in self.prohibited_patterns:
+            if pattern.search(message):
+                logger.warning(f"Conteúdo proibido detectado: {pattern.pattern}")
                 return False, "Conteúdo inapropriado ou fora do escopo"
         
         return True, None
     
     def _check_repair_relevance(self, message: str) -> float:
         """
-        Calcula score de relevância para reparos residenciais
+        Calcula score de relevância para reparos residenciais usando patterns pré-compilados
         
         Returns:
             Score de 0.0 a 1.0
@@ -140,9 +137,8 @@ class ContentGuardrail:
         # Conta keywords encontradas
         keyword_count = sum(1 for keyword in self.REPAIR_KEYWORDS if keyword in message_lower)
         
-        # Verifica padrões de pergunta
-        pattern_matches = sum(1 for pattern in self.QUESTION_PATTERNS 
-                            if re.search(pattern, message_lower, re.IGNORECASE))
+        # Verifica padrões de pergunta usando patterns compilados
+        pattern_matches = sum(1 for pattern in self.question_patterns if pattern.search(message))
         
         # Calcula score
         keyword_score = min(keyword_count / 3, 1.0)  # Normaliza em 3 keywords
@@ -154,47 +150,6 @@ class ContentGuardrail:
         logger.debug(f"Relevance score: {final_score:.2f} (keywords: {keyword_count}, patterns: {pattern_matches})")
         
         return final_score
-    
-    def _llm_validate(self, message: str) -> Tuple[bool, Optional[str]]:
-        """
-        Usa LLM para validar se a mensagem é sobre reparos residenciais
-        
-        Returns:
-            (is_valid, reason)
-        """
-        if not self.llm:
-            return True, None
-        
-        try:
-            validation_prompt = SystemMessage(content="""Você é um classificador de mensagens.
-Sua tarefa é determinar se uma mensagem é relacionada a REPAROS RESIDENCIAIS (consertos em casa, manutenção doméstica, DIY).
-
-Responda APENAS com:
-- "SIM" se a mensagem for sobre reparos/manutenção residencial
-- "NAO" se for sobre outro assunto
-
-Exemplos:
-- "Como consertar torneira?" → SIM
-- "Receita de bolo" → NAO
-- "Problema com porta emperrada" → SIM
-- "Previsão do tempo" → NAO""")
-            
-            user_message = HumanMessage(content=f"Mensagem: {message}\n\nClassificação:")
-            
-            response = self.llm.invoke([validation_prompt, user_message])
-            classification = response.content.strip().upper()
-            
-            logger.debug(f"LLM classification: {classification}")
-            
-            if "NAO" in classification or "NÃO" in classification:
-                return False, "Mensagem não relacionada a reparos residenciais"
-            
-            return True, None
-            
-        except Exception as e:
-            logger.error(f"Erro na validação LLM: {e}")
-            # Em caso de erro, permite a mensagem (fail-open)
-            return True, None
     
     def validate(self, message: str) -> Dict[str, any]:
         """
@@ -222,16 +177,7 @@ Exemplos:
         # 2. Calcula relevância
         relevance_score = self._check_repair_relevance(message)
         
-        # 3. Validação LLM (se habilitada)
-        if self.use_llm_validation and relevance_score < 0.3:
-            # Só usa LLM se o score de keywords for baixo
-            is_valid, reason = self._llm_validate(message)
-            if not is_valid:
-                if self.strict_mode:
-                    raise ContentGuardrailError(reason)
-                return {"is_valid": False, "reason": reason, "score": relevance_score}
-        
-        # 4. Decisão final
+        # 3. Decisão final
         # Em modo strict, exige score mínimo de 0.2
         # Em modo normal, exige score mínimo de 0.1
         min_score = 0.2 if self.strict_mode else 0.1
@@ -243,7 +189,3 @@ Exemplos:
             return {"is_valid": False, "reason": reason, "score": relevance_score}
         
         return {"is_valid": True, "reason": None, "score": relevance_score}
-
-
-# Importação para evitar erro circular
-import os

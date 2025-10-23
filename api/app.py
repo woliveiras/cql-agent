@@ -104,7 +104,6 @@ sessions: Dict[str, RepairAgent] = {}
 
 # Inicialização do Content Guardrail (compartilhado entre requisições)
 content_guardrail = ContentGuardrail(
-    use_llm_validation=False,  # Desabilitado para melhor performance
     strict_mode=False  # False para não bloquear imediatamente, apenas retornar 400
 )
 
