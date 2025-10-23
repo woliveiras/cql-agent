@@ -196,7 +196,9 @@ class TestContentGuardrail:
         msg = "Como\n\n\n\n\n\nconsertar\n\n\n\ntorneira?"
         result = guardrail.validate(msg)
         assert result['is_valid'] == False
-        assert 'formato' in result['reason'].lower() or 'suspeito' in result['reason'].lower()
+        # Pode ser bloqueado por repetição, formato ou quebras de linha
+        assert any(word in result['reason'].lower() for word in 
+                  ['formato', 'suspeito', 'repetição', 'quebra'])
     
     def test_prompt_injection_imperatives(self):
         """Testa detecção de múltiplos comandos imperativos"""
@@ -334,6 +336,68 @@ class TestContentGuardrail:
             # Deve passar ou ter score baixo mas não ser bloqueado por entropia
             if not result['is_valid']:
                 assert 'aleatório' not in result['reason'].lower()
+    
+    def test_excessive_character_repetition(self):
+        """Testa detecção de caracteres repetidos excessivamente"""
+        guardrail = ContentGuardrail()
+        messages = [
+            "Como consertar aaaaaaaaaa torneira?",  # 10 'a's consecutivos
+            "Problema!!!!!!!!!! na porta",           # 11 '!'s consecutivos
+            "vazamento......... no cano",            # 9 '.'s consecutivos
+        ]
+        for msg in messages:
+            result = guardrail.validate(msg)
+            assert result['is_valid'] == False
+            assert any(word in result['reason'].lower() for word in 
+                      ['repetição', 'especiais', 'proporção'])
+    
+    def test_sequence_repetition_spam(self):
+        """Testa detecção de sequências repetidas (spam)"""
+        guardrail = ContentGuardrail()
+        # Sequências curtas repetidas múltiplas vezes
+        messages = [
+            "abc abc abc abc abc",              # "abc" repetido 5 vezes
+            "123 123 123 123 123",              # "123" repetido 5 vezes
+            "help help help help help help",    # "help" repetido 6 vezes
+        ]
+        for msg in messages:
+            result = guardrail.validate(msg)
+            assert result['is_valid'] == False
+            # Pode ser bloqueado por repetição ou excesso de caracteres especiais
+            assert any(word in result['reason'].lower() for word in 
+                      ['repetição', 'especiais', 'proporção', 'relacionada'])
+    
+    def test_normal_repetition_allowed(self):
+        """Testa que repetições normais são permitidas"""
+        guardrail = ContentGuardrail()
+        messages = [
+            "Como consertar porta porta?",                      # Repetição de palavra (2x, ok)
+            "Muito muito problema com torneira",                # Repetição para ênfase (2x, ok)
+            "A pia está com vazamento... como resolver?",       # Elipses normais (3 pontos, ok)
+            "O problema é sério!!! Preciso de ajuda",           # Exclamações normais (3, ok)
+        ]
+        for msg in messages:
+            result = guardrail.validate(msg)
+            # Deve passar porque as repetições estão dentro dos limites
+            assert result['is_valid'] == True
+    
+    def test_word_repetition_vs_char_repetition(self):
+        """Testa diferença entre repetição de palavras (ok) e caracteres (spam)"""
+        guardrail = ContentGuardrail()
+        
+        # Repetição de palavras inteiras é OK
+        msg_ok = "Como como como consertar torneira?"
+        result = guardrail.validate(msg_ok)
+        # Pode ser válido se tiver keywords suficientes
+        if not result['is_valid']:
+            # Não deve ser bloqueado por repetição de caracteres
+            assert 'repetição' not in result['reason'].lower()
+        
+        # Repetição de caracteres é spam
+        msg_spam = "Comooooooooo consertar torneira?"
+        result = guardrail.validate(msg_spam)
+        assert result['is_valid'] == False
+        assert 'repetição' in result['reason'].lower()
 
 
 if __name__ == "__main__":

@@ -30,6 +30,11 @@ class ContentGuardrail:
     MAX_ENTROPY = 5.0               # Entropia máxima (bits por caractere)
     MAX_NON_ALPHA_RATIO = 0.4       # 40% de caracteres não-alfabéticos
     
+    # Configurações de detecção de repetição
+    MAX_CHAR_REPETITION = 5         # Máximo de caracteres iguais consecutivos
+    MAX_SEQUENCE_REPETITION = 3     # Máximo de sequências repetidas
+    MIN_SEQUENCE_LENGTH = 3         # Tamanho mínimo de sequência para detectar
+    
     # Palavras-chave relacionadas a reparos residenciais
     REPAIR_KEYWORDS = [
         # Estruturas
@@ -225,6 +230,68 @@ class ContentGuardrail:
         
         return True, None
     
+    def _detect_character_repetition(self, message: str) -> Tuple[bool, Optional[str]]:
+        """
+        Detecta padrões suspeitos de repetição de caracteres
+        
+        Verifica:
+        - Caracteres iguais consecutivos (ex: "aaaaaaa", "!!!!!!!")
+        - Sequências repetidas (ex: "abcabcabc", "123123123")
+        - Padrões de spam/flooding
+        
+        Returns:
+            (is_valid, reason)
+        """
+        if not message:
+            return True, None
+        
+        # 1. Detecta caracteres consecutivos repetidos
+        max_consecutive = 1
+        current_char = message[0]
+        current_count = 1
+        
+        for char in message[1:]:
+            if char == current_char:
+                current_count += 1
+                max_consecutive = max(max_consecutive, current_count)
+            else:
+                current_char = char
+                current_count = 1
+        
+        if max_consecutive > self.MAX_CHAR_REPETITION:
+            logger.warning(
+                f"Excesso de caracteres consecutivos: '{current_char}' repetido {max_consecutive} vezes"
+            )
+            return False, "Padrão de repetição excessiva detectado"
+        
+        # 2. Detecta sequências repetidas (padrão: substring repetida múltiplas vezes)
+        message_len = len(message)
+        
+        # Testa diferentes tamanhos de sequência
+        for seq_len in range(self.MIN_SEQUENCE_LENGTH, min(message_len // 2, 20)):
+            # Extrai sequências possíveis
+            sequences = {}
+            for i in range(message_len - seq_len + 1):
+                seq = message[i:i + seq_len]
+                if seq in sequences:
+                    sequences[seq] += 1
+                else:
+                    sequences[seq] = 1
+            
+            # Verifica se alguma sequência se repete demais
+            for seq, count in sequences.items():
+                # Ignora sequências de espaços ou caracteres únicos
+                if len(set(seq.strip())) <= 1:
+                    continue
+                
+                if count > self.MAX_SEQUENCE_REPETITION:
+                    logger.warning(
+                        f"Sequência repetida detectada: '{seq}' aparece {count} vezes"
+                    )
+                    return False, "Padrão de repetição suspeito detectado"
+        
+        return True, None
+    
     def _detect_prompt_injection(self, message: str) -> Tuple[bool, Optional[str]]:
         """
         Detecta tentativas sofisticadas de prompt injection
@@ -350,24 +417,31 @@ class ContentGuardrail:
                 raise ContentGuardrailError(reason)
             return {"is_valid": False, "reason": reason, "score": 0.0}
         
-        # 2. Detecta prompt injection avançada
+        # 2. Detecta repetição de caracteres
+        is_valid, reason = self._detect_character_repetition(message)
+        if not is_valid:
+            if self.strict_mode:
+                raise ContentGuardrailError(reason)
+            return {"is_valid": False, "reason": reason, "score": 0.0}
+        
+        # 3. Detecta prompt injection avançada
         is_safe, reason = self._detect_prompt_injection(message)
         if not is_safe:
             if self.strict_mode:
                 raise ContentGuardrailError(reason)
             return {"is_valid": False, "reason": reason, "score": 0.0}
         
-        # 3. Verifica conteúdo proibido via patterns
+        # 4. Verifica conteúdo proibido via patterns
         is_valid, reason = self._check_prohibited_content(message)
         if not is_valid:
             if self.strict_mode:
                 raise ContentGuardrailError(reason)
             return {"is_valid": False, "reason": reason, "score": 0.0}
         
-        # 4. Calcula relevância
+        # 5. Calcula relevância
         relevance_score = self._check_repair_relevance(message)
         
-        # 5. Decisão final
+        # 6. Decisão final
         # Em modo strict, exige score mínimo de 0.2
         # Em modo normal, exige score mínimo de 0.1
         min_score = 0.2 if self.strict_mode else 0.1
