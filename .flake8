@@ -1,0 +1,16 @@
+[flake8]
+exclude = 
+    .venv,
+    __pycache__,
+    .git,
+    build,
+    dist,
+    *.egg-info,
+    chroma_db
+
+max-line-length = 120
+max-complexity = 10
+
+ignore = 
+    E203,
+    W503,
