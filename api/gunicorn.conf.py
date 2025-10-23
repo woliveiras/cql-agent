@@ -47,45 +47,57 @@ reload_engine = "auto"
 preload_app = True
 
 # Lifecycle hooks
+
+
 def on_starting(server):
     """Executado quando o Gunicorn inicia"""
     server.log.info("🚀 Gunicorn starting...")
+
 
 def when_ready(server):
     """Executado quando o servidor está pronto para aceitar conexões"""
     server.log.info("✅ Gunicorn ready. Workers: %s", workers)
 
+
 def on_reload(server):
     """Executado quando o servidor recarrega"""
     server.log.info("🔄 Gunicorn reloading...")
+
 
 def worker_int(worker):
     """Executado quando o worker recebe SIGINT ou SIGQUIT"""
     worker.log.info("⚠️ Worker received INT or QUIT signal")
 
+
 def worker_abort(worker):
     """Executado quando o worker recebe SIGABRT"""
     worker.log.info("❌ Worker received SIGABRT signal")
+
 
 def pre_fork(server, worker):
     """Executado antes de fazer fork de um worker"""
     pass
 
+
 def post_fork(server, worker):
     """Executado após fazer fork de um worker"""
     server.log.info("👷 Worker spawned (pid: %s)", worker.pid)
+
 
 def post_worker_init(worker):
     """Executado após inicialização do worker"""
     worker.log.info("🔧 Worker initialized")
 
+
 def worker_exit(server, worker):
     """Executado quando um worker termina"""
     server.log.info("👋 Worker exiting (pid: %s)", worker.pid)
 
+
 def child_exit(server, worker):
     """Executado quando um worker filho termina"""
     pass
+
 
 def on_exit(server):
     """Executado quando o Gunicorn termina"""

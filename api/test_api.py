@@ -5,12 +5,12 @@ Valida todos os endpoints e funcionalidades
 """
 
 import requests
-import json
 import time
 import sys
 
 BASE_URL = "http://localhost:5000"
 API_BASE = f"{BASE_URL}/api/v1"
+
 
 def print_test(name, success, details=""):
     """Imprime resultado do teste"""
@@ -19,8 +19,13 @@ def print_test(name, success, details=""):
     if details:
         print(f"   {details}")
 
-def test_health():
-    """Testa endpoint de health check"""
+
+# ============================================================================
+# Helper functions
+# ============================================================================
+
+def check_health():
+    """Verifica endpoint de health check"""
     try:
         response = requests.get(f"{BASE_URL}/health", timeout=5)
         success = response.status_code == 200
@@ -31,8 +36,9 @@ def test_health():
         print_test("Health Check", False, str(e))
         return False
 
-def test_swagger():
-    """Testa se documentação Swagger está disponível"""
+
+def check_swagger():
+    """Verifica se documentação Swagger está disponível"""
     try:
         response = requests.get(f"{BASE_URL}/docs", timeout=5)
         success = response.status_code == 200
@@ -42,8 +48,9 @@ def test_swagger():
         print_test("Swagger Documentation", False, str(e))
         return False
 
-def test_chat_message():
-    """Testa envio de mensagem"""
+
+def send_chat_message():
+    """Envia mensagem ao agente"""
     try:
         payload = {
             "message": "Como consertar uma torneira pingando?",
@@ -51,22 +58,22 @@ def test_chat_message():
             "use_rag": True,
             "use_web_search": False  # Desabilitar web para teste mais rápido
         }
-        
+
         print("\n📨 Enviando mensagem para API...")
         response = requests.post(
             f"{API_BASE}/chat/message",
             json=payload,
             timeout=60
         )
-        
+
         success = response.status_code == 200
-        
+
         if success:
             data = response.json()
             print_test("Chat Message", True, f"Sessão: {data.get('session_id')}")
-            print(f"\n💬 Resposta do agente:")
+            print("\n💬 Resposta do agente:")
             print(f"   {data.get('response', '')[:200]}...")
-            print(f"\n📊 Metadados:")
+            print("\n📊 Metadados:")
             print(f"   Estado: {data.get('state')}")
             print(f"   RAG: {data.get('metadata', {}).get('rag_enabled')}")
             return True, data.get('session_id')
@@ -74,17 +81,18 @@ def test_chat_message():
             print_test("Chat Message", False, f"Status: {response.status_code}")
             print(f"   Error: {response.text}")
             return False, None
-            
+
     except Exception as e:
         print_test("Chat Message", False, str(e))
         return False, None
 
-def test_list_sessions():
-    """Testa listagem de sessões"""
+
+def list_sessions():
+    """Lista sessões ativas"""
     try:
         response = requests.get(f"{API_BASE}/chat/sessions", timeout=5)
         success = response.status_code == 200
-        
+
         if success:
             data = response.json()
             total = data.get('total', 0)
@@ -93,13 +101,14 @@ def test_list_sessions():
         else:
             print_test("List Sessions", False, f"Status: {response.status_code}")
             return False
-            
+
     except Exception as e:
         print_test("List Sessions", False, str(e))
         return False
 
-def test_reset_session(session_id):
-    """Testa reset de sessão"""
+
+def reset_session(session_id):
+    """Reseta uma sessão específica (helper function)"""
     try:
         response = requests.delete(
             f"{API_BASE}/chat/reset/{session_id}",
@@ -112,67 +121,69 @@ def test_reset_session(session_id):
         print_test(f"Reset Session ({session_id})", False, str(e))
         return False
 
+
 def main():
     """Executa todos os testes"""
-    print("="*70)
+    print("=" * 70)
     print("🧪 TESTE DA API REST - REPAIR AGENT")
-    print("="*70)
-    
+    print("=" * 70)
+
     # Aguardar API iniciar
     print("\n⏳ Verificando se API está disponível...")
     time.sleep(1)
-    
-    print("\n" + "="*70)
+
+    print("\n" + "=" * 70)
     print("📡 TESTES DE ENDPOINTS")
-    print("="*70 + "\n")
-    
+    print("=" * 70 + "\n")
+
     # Testes básicos
     results = []
-    
-    results.append(("Health Check", test_health()))
-    results.append(("Swagger Docs", test_swagger()))
-    
+
+    results.append(("Health Check", check_health()))
+    results.append(("Swagger Docs", check_swagger()))
+
     # Teste de chat (mais demorado)
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("💬 TESTE DE CONVERSAÇÃO")
-    print("="*70)
-    
-    chat_success, session_id = test_chat_message()
+    print("=" * 70)
+
+    chat_success, session_id = send_chat_message()
     results.append(("Chat Message", chat_success))
-    
+
     # Testes de gerenciamento
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("🔧 TESTES DE GERENCIAMENTO")
-    print("="*70 + "\n")
-    
-    results.append(("List Sessions", test_list_sessions()))
-    
+    print("=" * 70 + "\n")
+
+    results.append(("List Sessions", list_sessions()))
+
     if session_id:
-        results.append(("Reset Session", test_reset_session(session_id)))
-    
+        results.append(("Reset Session", reset_session(session_id)))
+
     # Resumo
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("📊 RESUMO DOS TESTES")
-    print("="*70 + "\n")
-    
+    print("=" * 70 + "\n")
+
     passed = sum(1 for _, success in results if success)
     total = len(results)
-    
+
     for name, success in results:
         status = "✅" if success else "❌"
         print(f"{status} {name}")
-    
-    print(f"\n{'='*70}")
+
+    print(f"\n{'=' * 70}")
     print(f"Resultado: {passed}/{total} testes passaram")
-    
+
     if passed == total:
         print("🎉 Todos os testes passaram!")
-        print("="*70)
+        print("=" * 70)
         return 0
     else:
         print("⚠️  Alguns testes falharam")
-        print("="*70)
+        print("=" * 70)
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

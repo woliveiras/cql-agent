@@ -9,7 +9,7 @@ from .vectorstore import VectorStoreManager
 
 class DocumentRetriever:
     """Recupera documentos relevantes para queries"""
-    
+
     def __init__(
         self,
         vectorstore_manager: VectorStoreManager,
@@ -18,7 +18,7 @@ class DocumentRetriever:
     ):
         """
         Inicializa o retriever
-        
+
         Args:
             vectorstore_manager: Gerenciador do vector store
             k: Número de documentos a recuperar
@@ -31,14 +31,14 @@ class DocumentRetriever:
         self.vectorstore_manager = vectorstore_manager
         self.k = k
         self.relevance_threshold = relevance_threshold
-    
+
     def retrieve(self, query: str) -> Tuple[List[Document], bool]:
         """
         Recupera documentos relevantes para a query
-        
+
         Args:
             query: Pergunta do usuário
-            
+
         Returns:
             Tupla (documentos, encontrou_relevantes)
         """
@@ -48,54 +48,54 @@ class DocumentRetriever:
                 k=self.k,
                 score_threshold=self.relevance_threshold
             )
-            
+
             has_relevant = len(docs) > 0
             return docs, has_relevant
-            
+
         except Exception as e:
             print(f"⚠️  Erro ao buscar documentos: {e}")
             return [], False
-    
+
     def format_context(self, documents: List[Document]) -> str:
         """
         Formata documentos em um contexto para o prompt
-        
+
         Args:
             documents: Lista de documentos recuperados
-            
+
         Returns:
             Contexto formatado
         """
         if not documents:
             return ""
-        
+
         context_parts = []
-        
+
         for i, doc in enumerate(documents, 1):
             source = doc.metadata.get('source_file', 'desconhecido')
             page = doc.metadata.get('page', 'N/A')
             content = doc.page_content.strip()
-            
+
             context_parts.append(
                 f"[Documento {i} - {source} (página {page})]\n{content}"
             )
-        
+
         return "\n\n---\n\n".join(context_parts)
-    
+
     def retrieve_and_format(self, query: str) -> Tuple[str, bool]:
         """
         Recupera documentos e formata em contexto
-        
+
         Args:
             query: Pergunta do usuário
-            
+
         Returns:
             Tupla (contexto_formatado, encontrou_relevantes)
         """
         docs, has_relevant = self.retrieve(query)
-        
+
         if has_relevant:
             context = self.format_context(docs)
             return context, True
-        
+
         return "", False

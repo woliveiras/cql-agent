@@ -12,11 +12,11 @@ NUNCA sugira chamar um profissional na primeira tentativa."""
 def get_waiting_feedback_prompt(current_attempt: int, max_attempts: int) -> str:
     """
     Retorna o prompt para quando o agente está aguardando feedback
-    
+
     Args:
         current_attempt: Tentativa atual
         max_attempts: Número máximo de tentativas
-        
+
     Returns:
         Prompt formatado
     """
@@ -30,10 +30,10 @@ Seja encorajador e termine perguntando:
 def get_max_attempts_prompt(max_attempts: int) -> str:
     """
     Retorna o prompt para quando o máximo de tentativas foi atingido
-    
+
     Args:
         max_attempts: Número máximo de tentativas
-        
+
     Returns:
         Prompt formatado
     """
