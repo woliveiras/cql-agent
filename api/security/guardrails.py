@@ -68,12 +68,45 @@ class ContentGuardrail:
         # Conteúdo adulto/ofensivo
         r"\b(porn|xxx|sex|nude|naked|adult\s+content)\b",
         
-        # Tentativas de jailbreak
-        r"ignore\s+(previous|all)\s+(instructions|prompts)",
-        r"you\s+are\s+now",
-        r"forget\s+(everything|all|your)",
-        r"new\s+(role|character|personality)",
-        r"disregard\s+(previous|all)",
+        # Tentativas de jailbreak básicas
+        r"ignore\s+(previous|all|above)\s+(instructions?|prompts?|commands?|rules?)",
+        r"you\s+are\s+now\s+(a|an|acting|pretending)",
+        r"forget\s+(everything|all|your|the)\s*(you|instructions?|rules?)?",
+        r"new\s+(role|character|personality|identity|system)",
+        r"disregard\s+(previous|all|above|the)\s*(instructions?|rules?)?",
+        
+        # Prompt injection avançada - comandos de sistema
+        r"<\|.*?\|>",  # Tokens especiais do sistema
+        r"\[SYSTEM\]|\[INST\]|\[/INST\]",  # Tags de instrução
+        r"###\s*(System|Instruction|User|Assistant)",  # Markdown de sistema
+        r"<start_of_turn>|<end_of_turn>",  # Delimitadores de turno
+        
+        # Tentativas de role manipulation
+        r"(act|behave|pretend|play|roleplay)\s+(as|like)\s+(a|an)",
+        r"from\s+now\s+on",
+        r"switch\s+to\s+(mode|role|character)",
+        r"override\s+(your|the)\s+(instructions?|rules?|programming)",
+        
+        # Tentativas de extrair informações do sistema
+        r"(show|display|print|reveal|tell)\s+(me\s+)?(your|the)\s+(prompt|instructions?|system|rules?)",
+        r"what\s+(are|is)\s+your\s+(instructions?|prompt|rules?|system\s+message)",
+        r"repeat\s+(your|the)\s+(prompt|instructions?|system)",
+        
+        # Encoding attacks (base64, hex, etc)
+        r"base64|decode|encode|hex|ascii|unicode|\\x[0-9a-f]{2}",
+        r"eval\(|exec\(|system\(|shell\(",  # Code execution
+        
+        # Tentativas de bypass com separadores
+        r"---+\s*(ignore|new|system|instruction)",
+        r"\*\*\*+\s*(ignore|new|system|instruction)",
+        r"===+\s*(ignore|new|system|instruction)",
+        
+        # Payload injection
+        r";\s*(drop|delete|insert|update|select)\s+",  # SQL injection patterns
+        r"\$\{|\{\{.*?\}\}",  # Template injection
+        
+        # Multi-language jailbreaking
+        r"traduza|traduzir|translate|翻译",  # Bypass via translation
         
         # Tópicos completamente fora do escopo
         r"\b(crypto|bitcoin|invest|stock|trade|forex)\b",
@@ -110,6 +143,68 @@ class ContentGuardrail:
             f"question_patterns={len(self.question_patterns)}, "
             f"prohibited_patterns={len(self.prohibited_patterns)}"
         )
+    
+    def _detect_prompt_injection(self, message: str) -> Tuple[bool, Optional[str]]:
+        """
+        Detecta tentativas sofisticadas de prompt injection
+        
+        Analisa:
+        - Delimitadores suspeitos (---, ***, ===, ||)
+        - Caracteres especiais em excesso (>, <, {, }, [, ])
+        - Padrões de encoding (base64-like, hex)
+        - Tokens especiais do sistema
+        - Comandos imperativos suspeitos
+        
+        Returns:
+            (is_safe, reason)
+        """
+        # 1. Verifica excesso de delimitadores suspeitos
+        delimiter_count = sum([
+            message.count('---'),
+            message.count('***'),
+            message.count('==='),
+            message.count('|||'),
+            message.count('###')
+        ])
+        if delimiter_count >= 2:
+            logger.warning(f"Excesso de delimitadores detectado: {delimiter_count}")
+            return False, "Padrão suspeito de delimitadores detectado"
+        
+        # 2. Verifica excesso de caracteres especiais (possível payload)
+        special_chars = '<>{}[]$|\\`'
+        special_count = sum(1 for char in message if char in special_chars)
+        if special_count > len(message) * 0.1:  # Mais de 10% são caracteres especiais
+            logger.warning(f"Excesso de caracteres especiais: {special_count}/{len(message)}")
+            return False, "Excesso de caracteres especiais detectado"
+        
+        # 3. Detecta sequências que parecem base64 longas
+        # Base64 tem padrão: letras, números, +, /, = no final
+        base64_pattern = re.compile(r'[A-Za-z0-9+/]{20,}={0,2}')
+        if base64_pattern.search(message):
+            logger.warning("Possível payload base64 detectado")
+            return False, "Sequência codificada suspeita detectada"
+        
+        # 4. Detecta múltiplas quebras de linha (tentativa de injeção multi-linha)
+        if message.count('\n') > 5:
+            logger.warning(f"Excesso de quebras de linha: {message.count(chr(10))}")
+            return False, "Formato de mensagem suspeito"
+        
+        # 5. Detecta comandos imperativos em sequência
+        imperative_words = ['ignore', 'forget', 'disregard', 'override', 'bypass', 
+                           'skip', 'disable', 'remove', 'delete', 'change', 'modify']
+        imperative_count = sum(1 for word in imperative_words if word in message.lower())
+        if imperative_count >= 3:
+            logger.warning(f"Múltiplos comandos imperativos: {imperative_count}")
+            return False, "Múltiplos comandos de manipulação detectados"
+        
+        # 6. Detecta tentativas de fechar/abrir contextos
+        context_markers = ['</system>', '<system>', '[/INST]', '[INST]', 
+                          '<|endoftext|>', '<|im_end|>', '<|im_start|>']
+        if any(marker in message for marker in context_markers):
+            logger.warning("Marcadores de contexto do sistema detectados")
+            return False, "Tentativa de manipulação de contexto detectada"
+        
+        return True, None
     
     def _check_prohibited_content(self, message: str) -> Tuple[bool, Optional[str]]:
         """
@@ -167,17 +262,24 @@ class ContentGuardrail:
         Raises:
             ContentGuardrailError: Se a validação falhar em modo strict
         """
-        # 1. Verifica conteúdo proibido
+        # 1. Detecta prompt injection avançada
+        is_safe, reason = self._detect_prompt_injection(message)
+        if not is_safe:
+            if self.strict_mode:
+                raise ContentGuardrailError(reason)
+            return {"is_valid": False, "reason": reason, "score": 0.0}
+        
+        # 2. Verifica conteúdo proibido via patterns
         is_valid, reason = self._check_prohibited_content(message)
         if not is_valid:
             if self.strict_mode:
                 raise ContentGuardrailError(reason)
             return {"is_valid": False, "reason": reason, "score": 0.0}
         
-        # 2. Calcula relevância
+        # 3. Calcula relevância
         relevance_score = self._check_repair_relevance(message)
         
-        # 3. Decisão final
+        # 4. Decisão final
         # Em modo strict, exige score mínimo de 0.2
         # Em modo normal, exige score mínimo de 0.1
         min_score = 0.2 if self.strict_mode else 0.1
