@@ -104,7 +104,7 @@ sessions: Dict[str, RepairAgent] = {}
 
 # Inicialização do Content Guardrail (compartilhado entre requisições)
 content_guardrail = ContentGuardrail(
-    use_llm_validation=True,
+    use_llm_validation=False,  # Desabilitado para melhor performance
     strict_mode=False  # False para não bloquear imediatamente, apenas retornar 400
 )
 
@@ -143,41 +143,112 @@ class ChatEndpoint(Resource):
                     'details': 'A mensagem contém caracteres ou padrões não permitidos'
                 }, 400
             
-            # Guardrails de conteúdo
-            try:
-                validation_result = content_guardrail.validate(sanitized_message)
-                
-                if not validation_result['is_valid']:
-                    logger.warning(
-                        f"Mensagem bloqueada por guardrail: {validation_result['reason']} "
-                        f"(score: {validation_result['score']:.2f})"
-                    )
-                    return {
-                        'error': 'Conteúdo não permitido',
-                        'details': 'Sou um assistente especializado em reparos residenciais. '
-                                 'Por favor, faça perguntas relacionadas a consertos e manutenção doméstica.'
-                    }, 400
-                
-                # Log do score de relevância
-                logger.info(
-                    f"Mensagem validada (score: {validation_result['score']:.2f}): "
-                    f"{sanitized_message[:50]}..."
-                )
-                
-            except ContentGuardrailError as e:
-                logger.warning(f"Guardrail bloqueou mensagem: {e}")
-                return {
-                    'error': 'Conteúdo não permitido',
-                    'details': 'Sou um assistente especializado em reparos residenciais. '
-                             'Por favor, faça perguntas relacionadas a consertos e manutenção doméstica.'
-                }, 400
-            
             # Obter ou criar agente para sessão
             agent = get_or_create_agent(
                 data.session_id,
                 data.use_rag,
                 data.use_web_search
             )
+            
+            # Validação especial para feedback: só aceita "sim" ou "não"
+            if agent.state.value == "waiting_feedback":
+                # Lista de respostas válidas (sim/não e variações)
+                valid_feedback = [
+                    'sim', 's', 'yes', 'y', 'ok',
+                    'não', 'nao', 'n', 'no', 'nope'
+                ]
+                message_lower = sanitized_message.lower().strip()
+                
+                # Permite:
+                # 1. Palavras exatas da lista
+                # 2. Frases curtas (até 10 palavras) que contenham sim/não
+                # 3. Frases que começam com sim/não
+                is_valid_feedback = False
+                word_count = len(message_lower.split())
+                
+                if message_lower in valid_feedback:
+                    is_valid_feedback = True
+                elif word_count <= 10:
+                    # Permite frases curtas que claramente são feedback
+                    feedback_keywords = ['sim', 'não', 'nao', 'yes', 'no']
+                    # Verifica se começa com feedback ou contém feedback + palavras comuns
+                    first_word = message_lower.split()[0] if message_lower else ''
+                    if first_word in feedback_keywords:
+                        is_valid_feedback = True
+                    elif any(kw in message_lower for kw in feedback_keywords):
+                        # Permite frases como "não funcionou", "ainda não", "sim, deu certo"
+                        # Mas bloqueia se tiver palavras suspeitas
+                        suspicious = ['ignore', 'system', 'admin', 'prompt', 'instruc', 'forget', 'esqueça']
+                        if not any(susp in message_lower for susp in suspicious):
+                            is_valid_feedback = True
+                
+                if not is_valid_feedback:
+                    logger.warning(f"Feedback inválido rejeitado: {sanitized_message}")
+                    return {
+                        'error': 'Resposta inválida',
+                        'details': 'Por favor, responda apenas com "sim" ou "não". O problema foi resolvido?'
+                    }, 400
+                
+                # Feedback válido - não precisa validar relevância
+                validation_result = {'is_valid': True, 'score': 1.0, 'reason': None}
+                logger.info(f"Feedback válido recebido: {sanitized_message}")
+            
+            # Estados finais também não precisam de validação de relevância (podem fazer nova pergunta)
+            elif agent.state.value in ["max_attempts", "resolved"]:
+                # Se está em estado final, pode fazer nova pergunta - valida normalmente
+                try:
+                    validation_result = content_guardrail.validate(sanitized_message)
+                    
+                    if not validation_result['is_valid']:
+                        logger.warning(
+                            f"Mensagem bloqueada por guardrail: {validation_result['reason']} "
+                            f"(score: {validation_result['score']:.2f})"
+                        )
+                        return {
+                            'error': 'Conteúdo não permitido',
+                            'details': 'Sou um assistente especializado em reparos residenciais. '
+                                     'Por favor, faça perguntas relacionadas a consertos e manutenção doméstica.'
+                        }, 400
+                    
+                    logger.info(f"Nova pergunta após estado final (score: {validation_result['score']:.2f})")
+                    
+                except ContentGuardrailError as e:
+                    logger.warning(f"Guardrail bloqueou mensagem: {e}")
+                    return {
+                        'error': 'Conteúdo não permitido',
+                        'details': 'Sou um assistente especializado em reparos residenciais. '
+                                 'Por favor, faça perguntas relacionadas a consertos e manutenção doméstica.'
+                    }, 400
+            
+            # Estado NEW_PROBLEM - valida normalmente
+            else:
+                try:
+                    validation_result = content_guardrail.validate(sanitized_message)
+                    
+                    if not validation_result['is_valid']:
+                        logger.warning(
+                            f"Mensagem bloqueada por guardrail: {validation_result['reason']} "
+                            f"(score: {validation_result['score']:.2f})"
+                        )
+                        return {
+                            'error': 'Conteúdo não permitido',
+                            'details': 'Sou um assistente especializado em reparos residenciais. '
+                                     'Por favor, faça perguntas relacionadas a consertos e manutenção doméstica.'
+                        }, 400
+                    
+                    # Log do score de relevância
+                    logger.info(
+                        f"Mensagem validada (score: {validation_result['score']:.2f}): "
+                        f"{sanitized_message[:50]}..."
+                    )
+                    
+                except ContentGuardrailError as e:
+                    logger.warning(f"Guardrail bloqueou mensagem: {e}")
+                    return {
+                        'error': 'Conteúdo não permitido',
+                        'details': 'Sou um assistente especializado em reparos residenciais. '
+                                 'Por favor, faça perguntas relacionadas a consertos e manutenção doméstica.'
+                    }, 400
             
             # Processar mensagem (usar a mensagem sanitizada)
             logger.info(f"Processando mensagem da sessão {data.session_id}: {sanitized_message[:50]}...")

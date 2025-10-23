@@ -80,9 +80,9 @@ O módulo está integrado em `api/app.py`:
 3. **Guardrails** (valida relevância do domínio)
 4. **Tratamento de erro** (retorna 400 sem vazar detalhes)
 
-### Fluxo de validação:
+### Fluxo de validação
 
-```
+```text
 Requisição
     ↓
 [Pydantic] Valida schema (1-4096 chars)
@@ -147,7 +147,7 @@ O sistema registra:
 
 Exemplo de log:
 
-```
+```sh
 2025-01-20 10:30:45 - WARNING - Possível tentativa de SQL injection detectada
 2025-01-20 10:31:12 - INFO - Mensagem validada (score: 0.85): Como consertar...
 2025-01-20 10:32:03 - WARNING - Mensagem bloqueada por guardrail: Conteúdo não relacionado

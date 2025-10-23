@@ -198,6 +198,15 @@ class RepairAgent:
         Returns:
             Resposta do agente
         """
+        # Se chegou ao máximo de tentativas ou problema resolvido,
+        # verificar se é uma nova pergunta ("não" é um feedback)
+        if self.state in [ConversationState.MAX_ATTEMPTS, ConversationState.RESOLVED]:
+            # Se não é feedback simples (sim/não), considerar como nova pergunta
+            if not (self._is_positive_feedback(user_message) or self._is_negative_feedback(user_message)):
+                # Reset para novo problema
+                self.reset()
+                # Continua processamento normal abaixo
+        
         # Atualiza o estado baseado no feedback
         if self.state == ConversationState.WAITING_FEEDBACK:
             if self._is_positive_feedback(user_message):
@@ -216,7 +225,7 @@ class RepairAgent:
                 # Feedback ambíguo - pede clarificação
                 return AMBIGUOUS_FEEDBACK_MESSAGE
         
-        # Se chegou ao máximo de tentativas
+        # Se chegou ao máximo de tentativas (e não resetou acima)
         if self.state == ConversationState.MAX_ATTEMPTS:
             return get_max_attempts_message(self.max_attempts)
         
