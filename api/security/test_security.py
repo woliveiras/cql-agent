@@ -187,7 +187,8 @@ class TestContentGuardrail:
         msg = "Como consertar SGVsbG8gV29ybGQgVGhpcyBJcyBBIExvbmdlciBCYXNlNjRTdHJpbmc="
         result = guardrail.validate(msg)
         assert result['is_valid'] == False
-        assert 'codificada' in result['reason']
+        assert any(word in result['reason'].lower() for word in 
+                  ['codificada', 'aleatório', 'especiais'])
     
     def test_prompt_injection_multiline(self):
         """Testa detecção de excesso de quebras de linha"""
@@ -257,6 +258,82 @@ class TestContentGuardrail:
         for msg in messages:
             result = guardrail.validate(msg)
             assert result['is_valid'] == True
+    
+    def test_entropy_random_text(self):
+        """Testa detecção de texto aleatório via entropia"""
+        guardrail = ContentGuardrail()
+        # Texto completamente aleatório (com mais variação para aumentar entropia)
+        random_text = "xkjdhfg qwpoeiur zmxncvb aslkdjf woeiruty pzmxqw nbvcxz"
+        result = guardrail.validate(random_text)
+        assert result['is_valid'] == False
+        # Pode ser bloqueado por entropia ou por não ser relevante
+        assert any(word in result['reason'].lower() for word in 
+                  ['aleatório', 'relevân', 'relacionada', 'reparos'])
+    
+    def test_entropy_base64_payload(self):
+        """Testa detecção de payload codificado via entropia"""
+        guardrail = ContentGuardrail()
+        # String que parece base64 (alta entropia)
+        payload = "SGVsbG8gV29ybGQgVGhpcyBJcyBBIExvbmdlciBCYXNlNjRTdHJpbmcgV2l0aCBNb3JlIERhdGE="
+        result = guardrail.validate(payload)
+        assert result['is_valid'] == False
+        # Pode ser bloqueado por entropia ou base64 detection
+        assert any(word in result['reason'].lower() for word in 
+                  ['aleatório', 'codificada', 'especiais'])
+    
+    def test_message_too_short(self):
+        """Testa detecção de mensagem muito curta"""
+        guardrail = ContentGuardrail()
+        messages = ["ok", "hi", "a"]
+        for msg in messages:
+            result = guardrail.validate(msg)
+            assert result['is_valid'] == False
+            assert 'curta' in result['reason'].lower()
+    
+    def test_message_too_long(self):
+        """Testa detecção de mensagem muito longa (DOS protection)"""
+        guardrail = ContentGuardrail()
+        # Mensagem com mais de 2000 caracteres
+        long_message = "Como consertar torneira? " * 100
+        result = guardrail.validate(long_message)
+        assert result['is_valid'] == False
+        assert 'longa' in result['reason'].lower()
+    
+    def test_excessive_non_alpha_chars(self):
+        """Testa detecção de excesso de caracteres não-alfabéticos"""
+        guardrail = ContentGuardrail()
+        # Mensagem com muitos números e símbolos
+        msg = "123456789 $$$ !!! @@@ ### 999 *** 777"
+        result = guardrail.validate(msg)
+        assert result['is_valid'] == False
+        assert 'especiais' in result['reason'].lower() or 'aleatório' in result['reason'].lower()
+    
+    def test_normal_text_entropy(self):
+        """Testa que texto normal em português passa na validação de entropia"""
+        guardrail = ContentGuardrail()
+        messages = [
+            "Como consertar uma torneira que está pingando?",
+            "Minha porta está emperrada e não consigo abrir",
+            "Tenho um problema com vazamento no encanamento da cozinha"
+        ]
+        for msg in messages:
+            result = guardrail.validate(msg)
+            assert result['is_valid'] == True
+    
+    def test_mixed_language_normal(self):
+        """Testa que mistura normal de português com termos técnicos passa"""
+        guardrail = ContentGuardrail()
+        # Mensagens que podem ter alguns termos técnicos/inglês mas são válidas
+        messages = [
+            "Como consertar o LED da lâmpada?",
+            "Problema no switch da tomada",
+            "O PVC do cano está rachado"
+        ]
+        for msg in messages:
+            result = guardrail.validate(msg)
+            # Deve passar ou ter score baixo mas não ser bloqueado por entropia
+            if not result['is_valid']:
+                assert 'aleatório' not in result['reason'].lower()
 
 
 if __name__ == "__main__":

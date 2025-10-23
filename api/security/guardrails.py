@@ -5,8 +5,10 @@ Verifica se a mensagem está relacionada ao domínio do agente (reparos residenc
 
 import os
 import re
+import math
 import logging
 from typing import Dict, List, Optional, Tuple, Pattern
+from collections import Counter
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +23,12 @@ class ContentGuardrail:
     Guardrail de conteúdo que valida se a mensagem é apropriada
     para o domínio de reparos residenciais
     """
+    
+    # Configurações de validação de tamanho e entropia
+    MIN_MESSAGE_LENGTH = 3          # Mensagens muito curtas (ex: "ok", "hi")
+    MAX_MESSAGE_LENGTH = 2000       # Mensagens muito longas (possível DOS)
+    MAX_ENTROPY = 5.0               # Entropia máxima (bits por caractere)
+    MAX_NON_ALPHA_RATIO = 0.4       # 40% de caracteres não-alfabéticos
     
     # Palavras-chave relacionadas a reparos residenciais
     REPAIR_KEYWORDS = [
@@ -144,6 +152,79 @@ class ContentGuardrail:
             f"prohibited_patterns={len(self.prohibited_patterns)}"
         )
     
+    def _calculate_entropy(self, message: str) -> float:
+        """
+        Calcula a entropia de Shannon do texto (bits por caractere)
+        
+        Entropia mede a "aleatoriedade" ou "imprevisibilidade" do texto.
+        Valores típicos:
+        - Texto normal em português: 3.0 - 4.5 bits/char
+        - Texto aleatório/spam: > 5.0 bits/char
+        - Payloads codificados: > 5.5 bits/char
+        
+        Returns:
+            Entropia em bits por caractere
+        """
+        if not message:
+            return 0.0
+        
+        # Conta a frequência de cada caractere
+        char_counts = Counter(message)
+        message_len = len(message)
+        
+        # Calcula a entropia de Shannon
+        entropy = 0.0
+        for count in char_counts.values():
+            probability = count / message_len
+            if probability > 0:
+                entropy -= probability * math.log2(probability)
+        
+        logger.debug(f"Entropy calculated: {entropy:.2f} bits/char for message length {message_len}")
+        return entropy
+    
+    def _validate_message_size_and_entropy(self, message: str) -> Tuple[bool, Optional[str]]:
+        """
+        Valida tamanho da mensagem e analisa entropia para detectar spam/payloads
+        
+        Verifica:
+        - Tamanho mínimo e máximo
+        - Entropia (aleatoriedade do texto)
+        - Proporção de caracteres não-alfabéticos
+        
+        Returns:
+            (is_valid, reason)
+        """
+        message_len = len(message)
+        
+        # 1. Valida tamanho mínimo
+        if message_len < self.MIN_MESSAGE_LENGTH:
+            logger.warning(f"Mensagem muito curta: {message_len} caracteres")
+            return False, "Mensagem muito curta"
+        
+        # 2. Valida tamanho máximo (proteção contra DOS)
+        if message_len > self.MAX_MESSAGE_LENGTH:
+            logger.warning(f"Mensagem muito longa: {message_len} caracteres")
+            return False, "Mensagem muito longa"
+        
+        # 3. Calcula e valida entropia
+        entropy = self._calculate_entropy(message)
+        if entropy > self.MAX_ENTROPY:
+            logger.warning(f"Entropia muito alta: {entropy:.2f} bits/char (max: {self.MAX_ENTROPY})")
+            return False, "Texto com padrão aleatório detectado"
+        
+        # 4. Valida proporção de caracteres não-alfabéticos
+        alpha_count = sum(1 for char in message if char.isalpha())
+        non_alpha_ratio = 1 - (alpha_count / message_len) if message_len > 0 else 0
+        
+        if non_alpha_ratio > self.MAX_NON_ALPHA_RATIO:
+            logger.warning(
+                f"Excesso de caracteres não-alfabéticos: {non_alpha_ratio:.2%} "
+                f"(max: {self.MAX_NON_ALPHA_RATIO:.2%})"
+            )
+            return False, "Proporção suspeita de caracteres especiais"
+        
+        return True, None
+    
     def _detect_prompt_injection(self, message: str) -> Tuple[bool, Optional[str]]:
         """
         Detecta tentativas sofisticadas de prompt injection
@@ -262,24 +343,31 @@ class ContentGuardrail:
         Raises:
             ContentGuardrailError: Se a validação falhar em modo strict
         """
-        # 1. Detecta prompt injection avançada
+        # 1. Valida tamanho e entropia
+        is_valid, reason = self._validate_message_size_and_entropy(message)
+        if not is_valid:
+            if self.strict_mode:
+                raise ContentGuardrailError(reason)
+            return {"is_valid": False, "reason": reason, "score": 0.0}
+        
+        # 2. Detecta prompt injection avançada
         is_safe, reason = self._detect_prompt_injection(message)
         if not is_safe:
             if self.strict_mode:
                 raise ContentGuardrailError(reason)
             return {"is_valid": False, "reason": reason, "score": 0.0}
         
-        # 2. Verifica conteúdo proibido via patterns
+        # 3. Verifica conteúdo proibido via patterns
         is_valid, reason = self._check_prohibited_content(message)
         if not is_valid:
             if self.strict_mode:
                 raise ContentGuardrailError(reason)
             return {"is_valid": False, "reason": reason, "score": 0.0}
         
-        # 3. Calcula relevância
+        # 4. Calcula relevância
         relevance_score = self._check_repair_relevance(message)
         
-        # 4. Decisão final
+        # 5. Decisão final
         # Em modo strict, exige score mínimo de 0.2
         # Em modo normal, exige score mínimo de 0.1
         min_score = 0.2 if self.strict_mode else 0.1
