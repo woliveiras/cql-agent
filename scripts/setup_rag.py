@@ -9,8 +9,8 @@ from pathlib import Path
 # Adicionar diretório raiz ao path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from rag.loader import PDFLoader
-from rag.vectorstore import VectorStoreManager
+from agents.rag.loader import PDFLoader
+from agents.rag.vectorstore import VectorStoreManager
 
 
 def main():
@@ -21,7 +21,7 @@ def main():
     print("=" * 60)
     
     # Configurações
-    pdf_directory = "./pdfs"
+    pdf_directory = "./agents/rag/pdfs"
     chroma_directory = "./chroma_db"
     
     # Verificar se há PDFs
@@ -86,7 +86,7 @@ def main():
         print(f"\n📁 Vector store: {chroma_directory}")
         print(f"📄 Total de chunks: {len(documents)}")
         print(f"📚 PDFs processados: {len(pdf_files)}")
-        print("\n💡 Agora você pode executar: uv run agent.py")
+        print("\n💡 Agora você pode executar: uv run agents/repair_agent/agent.py")
         
     except Exception as e:
         print(f"\n❌ Erro durante o processamento: {e}")
