@@ -6,9 +6,34 @@ on:
       - main
 
 jobs:
+  scan_node_dependencies:
+    runs-on: ubuntu-latest
+    name: npm audit
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install pnpm
+        run: corepack enable && corepack prepare pnpm@latest --activate
+
+      - name: Cache pnpm modules
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      - name: install dependencies
+        working-directory: ./web
+        run: pnpm install
+
+      - uses: oke-py/npm-audit-action@v3
+        with:
+          github_token: ${{ secrets.AUTH_GITHUB_TOKEN }}
+          audit_level: moderate
+          create_issues: false
+
   quality_checks:
     runs-on: ubuntu-latest
-    
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -32,24 +57,34 @@ jobs:
         with:
           node-version: '20.x'
           cache: 'pnpm'
+          cache-dependency-path: 'web/pnpm-lock.yaml'
 
       - name: Install pnpm
-        run: npm install -g pnpm
-
-      - name: Install frontend dependencies
         working-directory: ./web
-        run: pnpm install
+        run: corepack enable && corepack prepare pnpm@latest --activate
+
+      - name: Cache pnpm modules
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('web/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      - name: biome lint
+        working-directory: ./web
+        run: pnpm run lint
 
       - name: Run frontend unit tests
         working-directory: ./web
         run: pnpm test -- --coverage
       
-      - name: Run linter (flake8)
+      - name: Run API linter (flake8)
         run: uv run flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
       
-      - name: Run linter (pylint)
+      - name: Run API linter (pylint)
         run: uv run pylint **/*.py --fail-under=8.0
         continue-on-error: true
       
-      - name: Run unit tests
+      - name: Run API unit tests
         run: uv run pytest -v
