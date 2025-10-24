@@ -5,6 +5,7 @@ import { globalStyles } from './styles/global';
 
 import { Layout } from './components/Layout';
 import { Welcome } from './pages/Welcome';
+import { Chat } from './pages/Chat';
 import { Showcase } from './pages/Showcase';
 
 function App() {
@@ -25,7 +26,7 @@ function App() {
             path="/chat"
             element={
               <Layout showHeader>
-                <div>Chat Page (TODO)</div>
+                <Chat />
               </Layout>
             }
           />
