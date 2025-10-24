@@ -33,7 +33,7 @@ dependencies = [
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["security", "tests"]
+testpaths = ["api"]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
@@ -45,4 +45,8 @@ addopts = [
 markers = [
     "slow: marks tests as slow",
     "integration: marks tests as integration tests",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning:spacy.*:",
+    "ignore::DeprecationWarning:weasel.*:",
 ]

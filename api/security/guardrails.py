@@ -22,6 +22,12 @@ class ContentGuardrail:
     """
     Guardrail de conteúdo que valida se a mensagem é apropriada
     para o domínio de reparos residenciais
+    
+    Usa múltiplas estratégias de validação:
+    1. Fuzzy matching para detectar typos em keywords
+    2. NER (Named Entity Recognition) para extrair entidades
+    3. Patterns de prompt injection
+    4. Análise de entropia e repetição
     """
 
     # Configurações de validação de tamanho e entropia
@@ -134,15 +140,18 @@ class ContentGuardrail:
 
     def __init__(
         self,
-        strict_mode: bool = False
+        strict_mode: bool = False,
+        use_ner: bool = True
     ):
         """
         Inicializa o guardrail
 
         Args:
             strict_mode: Se True, aplica validação mais rigorosa
+            use_ner: Se True, usa NER para análise de entidades (recomendado)
         """
         self.strict_mode = strict_mode
+        self.use_ner = use_ner
 
         # Pré-compila todos os patterns regex para melhor performance
         self.question_patterns: List[Pattern] = [
@@ -155,11 +164,24 @@ class ContentGuardrail:
             for pattern in self.PROHIBITED_TOPICS_RAW
         ]
 
+        # NER lazy loading (carrega apenas quando necessário)
+        self._ner = None
+
         logger.info(
             f"ContentGuardrail initialized: strict_mode={strict_mode}, "
+            f"use_ner={use_ner}, "
             f"question_patterns={len(self.question_patterns)}, "
             f"prohibited_patterns={len(self.prohibited_patterns)}"
         )
+
+    @property
+    def ner(self):
+        """Lazy loading do NER (carrega apenas quando usado)"""
+        if self.use_ner and self._ner is None:
+            from api.security.ner_repair import get_repair_ner
+            self._ner = get_repair_ner()
+            logger.info("RepairNER loaded (lazy initialization)")
+        return self._ner
 
     def _fuzzy_match_keywords(
         self,
@@ -447,14 +469,33 @@ class ContentGuardrail:
         Calcula score de relevância para reparos residenciais
 
         Usa múltiplas estratégias:
-        1. Fuzzy matching para detectar keywords com typos
-        2. Patterns de pergunta pré-compilados
-        3. Score combinado ponderado
+        1. NER (Named Entity Recognition) se habilitado - mais preciso
+        2. Fuzzy matching para detectar keywords com typos - fallback
+        3. Patterns de pergunta pré-compilados
+        4. Score combinado ponderado
 
         Returns:
             Score de 0.0 a 1.0
         """
-        # 1. Usa fuzzy matching para encontrar keywords (detecta typos)
+        # Estratégia 1: NER (mais inteligente, entende contexto)
+        ner_score = 0.0
+        has_repair_context = False
+        
+        if self.use_ner and self.ner:
+            ner_summary = self.ner.get_entity_summary(message)
+            ner_score = ner_summary["score"]
+            has_repair_context = ner_summary["has_repair_context"]
+            
+            # Log entidades encontradas
+            if ner_summary["entities"]:
+                logger.info(
+                    f"NER entities found: {ner_summary['entity_count']} total, "
+                    f"primary: {ner_summary['primary_category']}, "
+                    f"has_repair_context: {has_repair_context}"
+                )
+                logger.debug(f"NER entities detail: {ner_summary['entities']}")
+        
+        # Estratégia 2: Fuzzy matching (detecta typos) - SEMPRE executa
         matched_keywords, corrections = self._fuzzy_match_keywords(message)
         keyword_count = len(matched_keywords)
 
@@ -462,20 +503,31 @@ class ContentGuardrail:
         if corrections:
             logger.info(f"Fuzzy corrections applied: {corrections}")
 
-        # 2. Verifica padrões de pergunta usando patterns compilados
+        # Estratégia 3: Verifica padrões de pergunta
         pattern_matches = sum(1 for pattern in self.question_patterns if pattern.search(message))
 
-        # 3. Calcula scores parciais
+        # Estratégia 4: Calcula scores parciais
         keyword_score = min(keyword_count / 3, 1.0)  # Normaliza em 3 keywords
         pattern_score = min(pattern_matches / 2, 1.0)  # Normaliza em 2 padrões
 
-        # 4. Média ponderada (keywords têm mais peso que patterns)
-        final_score = (keyword_score * 0.7) + (pattern_score * 0.3)
+        # Estratégia 5: Combina scores de forma inteligente
+        if self.use_ner and self.ner:
+            # Se NER encontrou bom contexto, usa como base
+            if has_repair_context:
+                # Média ponderada: NER (70%), keywords (20%), patterns (10%)
+                final_score = (ner_score * 0.7) + (keyword_score * 0.2) + (pattern_score * 0.1)
+            else:
+                # NER não encontrou contexto, dá mais peso ao fuzzy matching
+                # Média ponderada: keywords (50%), NER (30%), patterns (20%)
+                final_score = (keyword_score * 0.5) + (ner_score * 0.3) + (pattern_score * 0.2)
+        else:
+            # Sem NER: média ponderada keywords (70%) + patterns (30%)
+            final_score = (keyword_score * 0.7) + (pattern_score * 0.3)
 
         logger.debug(
             f"Relevance score: {final_score:.2f} "
             f"(keywords: {keyword_count}, patterns: {pattern_matches}, "
-            f"corrections: {len(corrections)})"
+            f"corrections: {len(corrections)}, ner_score: {ner_score:.2f})"
         )
 
         return final_score
