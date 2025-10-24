@@ -1,4 +1,5 @@
 import { Avatar } from '../Avatar';
+import { FeedbackButtons } from '../FeedbackButtons';
 import type { MessageBubbleProps } from './types';
 import {
   MessageContainer,
@@ -13,6 +14,9 @@ export function MessageBubble({
   content,
   timestamp,
   isStreaming = false,
+  showFeedback = false,
+  onFeedback,
+  feedbackDisabled = false,
 }: MessageBubbleProps) {
 
   const formatTime = (date: Date) => {
@@ -31,6 +35,10 @@ export function MessageBubble({
           {content}
           {isStreaming && <StreamingCursor />}
         </MessageBubbleStyled>
+        
+        {showFeedback && onFeedback && role === 'assistant' && (
+          <FeedbackButtons onFeedback={onFeedback} disabled={feedbackDisabled} />
+        )}
         
         {timestamp && (
           <MessageTime role={role}>

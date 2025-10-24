@@ -24,10 +24,13 @@ export function Chat() {
     sessionId,
     isLoading,
     error,
+    waitingFeedback,
     addMessage,
     setLoading,
     setError,
     clearError,
+    setWaitingFeedback,
+    updateMessage,
   } = useChatStore();
 
   const sendMessageMutation = useSendMessage();
@@ -69,14 +72,37 @@ export function Chat() {
         role: 'assistant',
         content: response.response,
         timestamp: new Date(),
+        needsFeedback: response.state === 'waiting_feedback',
       };
 
       addMessage(assistantMessage);
+      
+      // Se o estado é waiting_feedback, bloqueia o input
+      if (response.state === 'waiting_feedback') {
+        setWaitingFeedback(true);
+      }
     } catch (err) {
       const apiError = err as ApiError;
-      setError(
-        apiError.detail || 'Não foi possível enviar sua mensagem. Por favor, tente novamente.'
-      );
+      
+      // Se o erro contém "Resposta inválida" ou detalhes específicos, mostrar como mensagem do assistente
+      if (apiError.status === 400) {
+        const assistantMessage: Message = {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content:
+            'Por favor, responda apenas com "sim" ou "não".',
+          timestamp: new Date(),
+          needsFeedback: true,
+        };
+        addMessage(assistantMessage);
+        setWaitingFeedback(true);
+      } else {
+        // Outros erros mostram o banner de erro
+        setError(
+          apiError.detail || 'Não foi possível enviar sua mensagem. Por favor, tente novamente.'
+        );
+      }
+
       console.error('Error sending message:', err);
     } finally {
       setLoading(false);
@@ -85,6 +111,12 @@ export function Chat() {
 
   const handleCloseError = () => {
     clearError();
+  };
+
+  const handleFeedback = async (messageId: string, feedback: 'sim' | 'não') => {
+    updateMessage(messageId, { needsFeedback: false });
+    await handleSend(feedback);
+    setWaitingFeedback(false);
   };
 
   return (
@@ -100,6 +132,8 @@ export function Chat() {
         <MessageList
           messages={messages}
           isLoading={isLoading}
+          onFeedback={handleFeedback}
+          feedbackDisabled={isLoading}
           emptyState={
             <>
               <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔧</div>

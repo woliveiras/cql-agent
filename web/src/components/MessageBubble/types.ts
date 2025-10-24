@@ -5,4 +5,7 @@ export interface MessageBubbleProps {
   content: string;
   timestamp?: Date;
   isStreaming?: boolean;
+  showFeedback?: boolean;
+  onFeedback?: (feedback: 'sim' | 'não') => void;
+  feedbackDisabled?: boolean;
 }

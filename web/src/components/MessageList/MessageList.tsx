@@ -14,6 +14,8 @@ export function MessageList({
   messages,
   isLoading = false,
   emptyState,
+  onFeedback,
+  feedbackDisabled = false,
 }: MessageListProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -51,6 +53,9 @@ export function MessageList({
             content={message.content}
             timestamp={message.timestamp}
             isStreaming={message.isStreaming}
+            showFeedback={message.needsFeedback}
+            onFeedback={onFeedback ? (feedback) => onFeedback(message.id, feedback) : undefined}
+            feedbackDisabled={feedbackDisabled}
           />
         ))}
 

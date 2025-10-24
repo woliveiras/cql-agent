@@ -284,13 +284,6 @@ class RepairAgent:
             self.state = ConversationState.WAITING_FEEDBACK
             self.current_attempt = 1
 
-            # Garantir que a pergunta de feedback está sempre presente
-            feedback_question = "\n\nO problema foi resolvido? Responda com 'sim' ou 'não'."
-
-            # Se a resposta não termina com a pergunta, adicionar
-            if not response_text.rstrip().endswith(("'sim' ou 'não'.", "'sim' ou 'não'?", "sim' ou 'não'.")):
-                response_text += feedback_question
-
         # Para tentativas subsequentes (WAITING_FEEDBACK), também garantir a pergunta
         elif self.state == ConversationState.WAITING_FEEDBACK and self.current_attempt < self.max_attempts:
             feedback_question = "\n\nEssa solução funcionou? Responda com 'sim' ou 'não'."

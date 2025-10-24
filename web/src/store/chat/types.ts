@@ -5,6 +5,7 @@ export interface ChatState {
   sessionId: string;
   isLoading: boolean;
   error: string | null;
+  waitingFeedback: boolean;
 }
 
 export interface ChatActions {
@@ -16,6 +17,8 @@ export interface ChatActions {
   clearChat: () => void;
   clearError: () => void;
   startNewConversation: () => void;
+  setWaitingFeedback: (waiting: boolean) => void;
+  updateMessage: (id: string, updates: Partial<Message>) => void;
 }
 
 export type ChatStore = ChatState & ChatActions;

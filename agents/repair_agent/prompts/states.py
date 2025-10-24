@@ -4,7 +4,7 @@ Prompts de Estado - Instruções específicas para cada estado da conversação
 
 NEW_PROBLEM_PROMPT = """\n\nAPÓS fornecer a solução completa, SEMPRE termine sua resposta com:
 
-"O problema foi resolvido? Responda com 'sim' ou 'não'."
+"O problema foi resolvido?
 
 NUNCA sugira chamar um profissional na primeira tentativa."""
 

@@ -11,6 +11,7 @@ export const useChatStore = create<ChatStore>()(
       sessionId: sessionManager.getOrCreateSessionId(),
       isLoading: false,
       error: null,
+      waitingFeedback: false,
 
       // Actions
       addMessage: (message) =>
@@ -19,6 +20,13 @@ export const useChatStore = create<ChatStore>()(
         })),
 
       setMessages: (messages) => set({ messages }),
+
+      updateMessage: (id, updates) =>
+        set((state) => ({
+          messages: state.messages.map((msg) =>
+            msg.id === id ? { ...msg, ...updates } : msg
+          ),
+        })),
 
       setSessionId: (sessionId) => {
         sessionManager.setSessionId(sessionId);
@@ -37,6 +45,8 @@ export const useChatStore = create<ChatStore>()(
 
       clearError: () => set({ error: null }),
 
+      setWaitingFeedback: (waiting) => set({ waitingFeedback: waiting }),
+
       startNewConversation: () => {
         const newSessionId = sessionManager.createNewSession();
         set({
@@ -44,6 +54,7 @@ export const useChatStore = create<ChatStore>()(
           sessionId: newSessionId,
           error: null,
           isLoading: false,
+          waitingFeedback: false,
         });
       },
     }),
