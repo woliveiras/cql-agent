@@ -2,7 +2,7 @@
 
 ## 🎯 Visão Geral
 
-API Flask RESTful para o Agente de Reparos Residenciais, fornecendo endpoints documentados com Swagger/OpenAPI para integração com OpenWebUI e outros frontends.
+API FastAPI moderna para o Agente de Reparos Residenciais, fornecendo endpoints documentados automaticamente com Swagger UI e ReDoc para integração com OpenWebUI e outros frontends.
 
 ## 🏗️ Arquitetura
 
@@ -14,8 +14,8 @@ API Flask RESTful para o Agente de Reparos Residenciais, fornecendo endpoints do
          │ HTTP REST
          ▼
 ┌─────────────────┐
-│   Flask API     │
-│   + Swagger     │
+│  FastAPI        │
+│ Swagger + ReDoc │
 └────────┬────────┘
          │
          ▼
@@ -44,35 +44,38 @@ uv sync
 #### 🔧 Modo Desenvolvimento
 
 ```bash
-# Opção 1: Flask development server (com auto-reload)
-uv run python -m api.app
+# Opção 1: Uvicorn development server (RECOMENDADO)
+uv run uvicorn api.app:app --reload --host 0.0.0.0 --port 5000
 
-# Opção 2: Flask CLI (recomendado para dev)
-uv run flask --app api.app run --debug --port 5000
+# Opção 2: Uvicorn com logs verbosos
+uv run uvicorn api.app:app --reload --log-level debug --port 5000
 
-# Opção 3: Gunicorn com reload (mais próximo de produção)
-uv run gunicorn --config api/gunicorn.conf.py \
-  --reload \
-  --log-level debug \
-  api.app:app
+# Opção 3: Uvicorn com múltiplos workers (teste de produção)
+uv run uvicorn api.app:app --reload --workers 2 --host 0.0.0.0 --port 5000
 ```
 
 **Características do modo desenvolvimento:**
 
 - ✅ Auto-reload ao modificar código
-- ✅ Debug detalhado
-- ✅ Stack traces completos
-- ⚠️ Single worker (não otimizado para carga)
+- ✅ Suporte async/await nativo
+- ✅ Logs coloridos e detalhados
+- ✅ Performance otimizada
+- ⚠️ Single worker por padrão (usar --workers para mais)
 
 #### 🚀 Modo Produção
 
 ```bash
-# Opção 1: Gunicorn com configuração otimizada (RECOMENDADO)
-uv run gunicorn --config api/gunicorn.conf.py api.app:app
+# Opção 1: Uvicorn com múltiplos workers (RECOMENDADO)
+uv run uvicorn api.app:app \
+  --host 0.0.0.0 \
+  --port 5000 \
+  --workers 4 \
+  --log-level info
 
-# Opção 2: Gunicorn com parâmetros personalizados
+# Opção 2: Uvicorn com Gunicorn (máxima performance)
 uv run gunicorn api.app:app \
   --workers 4 \
+  --worker-class uvicorn.workers.UvicornWorker \
   --bind 0.0.0.0:5000 \
   --timeout 30 \
   --access-logfile - \
@@ -85,11 +88,11 @@ docker-compose up -d api
 **Características do modo produção:**
 
 - ✅ Múltiplos workers (baseado em CPU)
-- ✅ Preload da aplicação (memória otimizada)
+- ✅ Async/await para alta concorrência
 - ✅ Graceful restart
 - ✅ Health checks automáticos
 - ✅ Logging estruturado
-- ⚡ Alta performance e concorrência
+- ⚡ Performance superior com ASGI
 
 #### ⚙️ Configuração de Workers
 
@@ -99,16 +102,20 @@ O número de workers é calculado automaticamente:
 workers = (CPU cores × 2) + 1
 ```
 
-Você pode sobrescrever via variável de ambiente:
+Você pode sobrescrever via linha de comando:
 
 ```bash
 # Forçar 8 workers
-GUNICORN_WORKERS=8 uv run gunicorn --config api/gunicorn.conf.py api.app:app
+uv run uvicorn api.app:app --workers 8 --host 0.0.0.0 --port 5000
 ```
 
 ### 3️⃣ Acessar Documentação
 
-Abra no navegador: <http://localhost:5000/docs>
+**Swagger UI (Interativa):**  
+<http://localhost:5000/docs>
+
+**ReDoc (Somente Leitura):**  
+<http://localhost:5000/redoc>
 
 ## 📡 Endpoints
 
@@ -192,42 +199,42 @@ Health check da API.
 
 ## 🔧 Configuração
 
-### Gunicorn (Servidor de Produção)
+### Uvicorn (Servidor ASGI)
 
-O projeto usa Gunicorn como servidor WSGI para produção. As configurações estão em `api/gunicorn.conf.py`:
+O projeto usa Uvicorn como servidor ASGI para produção. Para configuração avançada, use Gunicorn como process manager com workers Uvicorn.
 
 #### Principais Configurações
 
 | Configuração | Valor Padrão | Descrição |
 |--------------|--------------|-----------|
-| `workers` | `(CPU × 2) + 1` | Número de processos worker |
-| `worker_class` | `sync` | Tipo de worker (sync para Flask) |
-| `timeout` | `30s` | Timeout de requisições |
-| `max_requests` | `1000` | Requests antes de reiniciar worker |
-| `preload_app` | `true` | Carregar app antes de fazer fork |
+| `workers` | `1` | Número de processos worker |
+| `host` | `127.0.0.1` | Host para bind |
+| `port` | `8000` | Porta do servidor |
+| `timeout-keep-alive` | `5s` | Timeout de keep-alive |
+| `reload` | `false` | Auto-reload (dev apenas) |
+
+#### Linha de Comando
+
+```bash
+# Múltiplos workers
+uv run uvicorn api.app:app --workers 4 --host 0.0.0.0 --port 5000
+
+# Com Gunicorn (process manager)
+uv run gunicorn api.app:app \
+  --workers 4 \
+  --worker-class uvicorn.workers.UvicornWorker \
+  --bind 0.0.0.0:5000
+```
 
 #### Variáveis de Ambiente
 
 ```bash
-# Número de workers (padrão: auto-detect)
-GUNICORN_WORKERS=4
-
-# Habilitar reload automático (dev apenas)
-GUNICORN_RELOAD=true
+# Porta do servidor
+PORT=5000
 
 # Nível de log
 LOG_LEVEL=info  # debug, info, warning, error, critical
 ```
-
-#### Lifecycle Hooks
-
-O Gunicorn possui hooks configurados para logging detalhado:
-
-- `on_starting`: Servidor iniciando
-- `when_ready`: Pronto para aceitar conexões
-- `post_fork`: Worker criado
-- `worker_exit`: Worker finalizado
-- `on_exit`: Servidor desligando
 
 #### Health Checks
 
@@ -275,10 +282,10 @@ timeout 5 curl -f http://localhost:5000/health
 OLLAMA_BASE_URL=http://localhost:11434
 
 # Porta da API
-FLASK_PORT=5000
+PORT=5000
 
-# Modo debug
-FLASK_ENV=development
+# Nível de log
+LOG_LEVEL=info
 
 # Caminho do ChromaDB
 CHROMA_DB_PATH=./chroma_db
@@ -337,20 +344,23 @@ CORS(app, resources={
 
 ### Rate Limiting
 
-Para produção, adicione rate limiting:
+Para produção, adicione rate limiting com Slowapi:
 
 ```bash
-uv add flask-limiter
+uv add slowapi
 ```
 
 ```python
-from flask_limiter import Limiter
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
-limiter = Limiter(
-    app,
-    key_func=lambda: request.remote_addr,
-    default_limits=["100 per hour"]
-)
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+
+@app.get("/api/v1/chat/message")
+@limiter.limit("100/hour")
+async def chat_message(request: Request):
+    ...
 ```
 
 ## 🐳 Docker
@@ -437,19 +447,25 @@ Por padrão, sessões são armazenadas em memória (dicionário Python). Isso é
 
 ### Redis (Produção)
 
-Para produção, use Redis:
+Para produção, use Redis com aioredis:
 
 ```bash
-uv add redis flask-session
+uv add aioredis
 ```
 
 ```python
-from flask_session import Session
-import redis
+import aioredis
+from fastapi import FastAPI
 
-app.config['SESSION_TYPE'] = 'redis'
-app.config['SESSION_REDIS'] = redis.from_url('redis://localhost:6379')
-Session(app)
+app = FastAPI()
+
+@app.on_event("startup")
+async def startup():
+    app.state.redis = await aioredis.from_url("redis://localhost:6379")
+
+@app.on_event("shutdown")
+async def shutdown():
+    await app.state.redis.close()
 ```
 
 ## 📊 Monitoramento
@@ -471,10 +487,10 @@ Logs incluem:
 
 ### Métricas
 
-Para métricas avançadas, adicione Prometheus:
+Para métricas avançadas, adicione Prometheus com starlette-prometheus:
 
 ```bash
-uv add prometheus-flask-exporter
+uv add starlette-prometheus
 ```
 
 ## 🚦 Status Codes
@@ -512,7 +528,7 @@ Veja `openwebui/pipe.py` para integração completa com OpenWebUI.
 curl http://localhost:11434/api/tags
 
 # Verificar dependências
-uv pip list | grep flask
+uv pip list | grep fastapi
 ```
 
 ### Erro 500 ao enviar mensagem

@@ -1,6 +1,6 @@
-# 🔗 Integração OpenWebUI + API Flask
+# 🔗 Integração OpenWebUI + API
 
-Este documento explica como integrar o web server Flask com o OpenWebUI usando Pipe Functions.
+Este documento explica como integrar o web server FastAPI com o OpenWebUI usando Pipe Functions.
 
 ## 📋 Índice
 
@@ -20,7 +20,7 @@ A integração usa o padrão **Pipe Function** do OpenWebUI:
 
 ```text
 ┌─────────────┐      ┌──────────────┐      ┌─────────────┐      ┌─────────┐
-│  OpenWebUI  │─────▶│ Pipe Function│─────▶│  Flask API  │─────▶│ Ollama  │
+│  OpenWebUI  │─────▶│ Pipe Function│─────▶│     API     │─────▶│ Ollama  │
 │  (Frontend) │      │  (pipe.py)   │      │ (port 5000) │      │(LLM)    │
 └─────────────┘      └──────────────┘      └─────────────┘      └─────────┘
      ▲                                             │
@@ -33,9 +33,9 @@ A integração usa o padrão **Pipe Function** do OpenWebUI:
 
 1. **Usuário** envia mensagem no OpenWebUI
 2. **OpenWebUI** encaminha para a Pipe Function (`pipe.py`)
-3. **Pipe Function** faz requisição HTTP POST para Flask API
-4. **Flask API** processa com RepairAgent (RAG + Web Search + LLM)
-5. **Flask API** retorna resposta em JSON
+3. **Pipe Function** faz requisição HTTP POST para FastAPI
+4. **FastAPI** processa com RepairAgent (RAG + Web Search + LLM)
+5. **FastAPI** retorna resposta em JSON
 6. **Pipe Function** formata e retorna para OpenWebUI
 7. **OpenWebUI** exibe para o usuário
 
@@ -79,7 +79,7 @@ A Pipe Function implementa um sistema inteligente de sessões para manter o cont
 
 O session_id pode ser usado para:
 - Debugar conversações específicas
-- Rastrear logs na API Flask
+- Rastrear logs na API FastAPI
 - Resetar sessões específicas via API: `DELETE /api/v1/chat/reset/{session_id}`
 
 ---
@@ -579,19 +579,18 @@ openwebui:
 
 ### Rate Limiting
 
-Adicione rate limiting na API Flask:
+Adicione rate limiting na API FastAPI:
 
 ```python
-from flask_limiter import Limiter
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
-limiter = Limiter(
-    app=app,
-    key_func=lambda: request.headers.get('X-Forwarded-For', request.remote_addr)
-)
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
 
-@api.route('/chat/message')
-@limiter.limit("10 per minute")
-def chat():
+@app.post('/api/v1/chat/message')
+@limiter.limit("10/minute")
+async def chat_message(request: Request):
     # ...
 ```
 
@@ -600,7 +599,7 @@ def chat():
 ## 📚 Referências
 
 - [OpenWebUI Pipelines Documentation](https://docs.openwebui.com/pipelines/)
-- [Flask-RESTX Documentation](https://flask-restx.readthedocs.io/)
+- [FastAPI Documentation](https://fastapi.tiangolo.com/)
 - [LangChain Documentation](https://python.langchain.com/)
 - [Ollama Documentation](https://github.com/ollama/ollama)
 
@@ -618,4 +617,4 @@ def chat():
 
 **Criado em**: Outubro 2025  
 **Projeto**: CQL Agent - Repair Agent com RAG e Web Search  
-**Stack**: Flask + OpenWebUI + LangChain + Ollama + ChromaDB
+**Stack**: FastAPI + OpenWebUI + LangChain + Ollama + ChromaDB

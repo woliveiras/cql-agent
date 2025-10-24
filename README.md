@@ -22,17 +22,18 @@ Agente de IA especializado em ajudar com pequenos reparos residenciais, constru�
 - 🔄 Fallback automático: RAG → Web → LLM
 - 🆓 Completamente gratuito (sem API keys)
 - 🇧🇷 Resultados em português (região br-pt)
-- 🌐 API REST com Flask
-- 📖 Documentação Swagger automática
+- 🌐 API REST com FastAPI
+- 📖 Documentação Swagger e ReDoc automáticas
 - 🔌 Pipe Function para OpenWebUI
 - 🐳 Docker Compose para deploy completo
 - 🔄 Gerenciamento de sessões
 - 🎨 Interface web moderna
 - 🔒 Privacidade mantida (DuckDuckGo não rastreia)
 - 🛡️ Segurança reforçada com sanitização e guardrails
-- ✅ Validação rigorosa de entrada (Pydantic)
+- ✅ Validação rigorosa de entrada (Pydantic nativo)
 - 🚫 Proteção contra injection (SQL, XSS, Command)
 - 🎯 Guardrails de conteúdo (apenas reparos residenciais)
+- ⚡ Performance otimizada (async/await)
 
 ## 🚀 Como usar
 
@@ -83,17 +84,20 @@ source .venv/bin/activate
 uv run agent.py
 ```
 
-#### Opção 2: API REST
+#### Opção 2: API REST (FastAPI)
 
 ```bash
 # Desenvolvimento (com auto-reload)
-uv run flask --app api.app run --debug
+uv run uvicorn api.app:app --host 0.0.0.0 --port 5000 --reload
 
-# Produção (com Gunicorn)
-uv run gunicorn --config api/gunicorn.conf.py api.app:app
+# Produção (com múltiplos workers)
+uv run uvicorn api.app:app --host 0.0.0.0 --port 5000 --workers 4
 
 # Acessar documentação Swagger
 # http://localhost:5000/docs
+
+# Acessar documentação ReDoc
+# http://localhost:5000/redoc
 
 # Testar API (script automatizado)
 ./test_api.sh
@@ -170,9 +174,8 @@ O problema foi resolvido? Responda com 'sim' ou 'não'.
 - **Pydantic** - Validação de dados
 - **Ollama** - Execução local de modelos LLM
 - **Docker** - Containerização do Ollama
-- **Flask** - Framework web para API REST
-- **Flask-RESTX** - Documentação Swagger automática
-- **Gunicorn** - Servidor WSGI para produção
+- **FastAPI** - Framework web moderno para API REST
+- **Uvicorn** - Servidor ASGI de alta performance
 - **ChromaDB** - Banco de dados vetorial para RAG
 - **DuckDuckGo** - Busca web gratuita e privada
 
@@ -213,7 +216,7 @@ cql-agent/
 │       └── web_search.py      # Busca web (DuckDuckGo)
 ├── api/                       # 🌐 API REST
 │   ├── __init__.py
-│   ├── app.py                 # Flask API + Swagger
+│   ├── app.py                 # FastAPI + Swagger automático
 │   ├── gunicorn.conf.py       # Configuração Gunicorn (produção)
 │   ├── test_api.py            # Testes da API
 │   ├── README.md

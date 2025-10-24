@@ -14,99 +14,97 @@ Este guia explica como executar a API em diferentes ambientes.
 
 ## 🔧 Desenvolvimento
 
-### Modo 1: Flask Development Server (Mais simples)
+### Modo 1: Uvicorn Development Server (Recomendado)
 
-**Ideal para:** Testes rápidos, debugging
+**Ideal para:** Desenvolvimento ativo com hot reload
 
 ```bash
 # Iniciar servidor de desenvolvimento
-uv run python -m api.app
+uv run uvicorn api.app:app --reload --host 0.0.0.0 --port 5000
 
 # ✅ Auto-reload habilitado
-# ✅ Debug mode ativo
-# ✅ Stack traces detalhados
-# ⚠️ Single-threaded (não usar em produção)
+# ✅ Async/await nativo
+# ✅ Performance otimizada
+# ✅ Logs coloridos e detalhados
 ```
 
-### Modo 2: Flask CLI (Recomendado para dev)
+### Modo 2: Uvicorn com Log Debug
 
-**Ideal para:** Desenvolvimento ativo com debugging
+**Ideal para:** Debugging detalhado
 
 ```bash
-# Iniciar com Flask CLI
-uv run flask --app api.app run --debug --port 5000
-
-# Com host customizado
-uv run flask --app api.app run --debug --host 0.0.0.0
+# Iniciar com logs verbosos
+uv run uvicorn api.app:app --reload --log-level debug --port 5000
 
 # Com variáveis de ambiente
-FLASK_ENV=development uv run flask --app api.app run --debug
+PYTHONPATH=. uv run uvicorn api.app:app --reload
 ```
 
 **Recursos:**
 
 - ✅ Auto-reload ao salvar arquivos
-- ✅ Debugger interativo no navegador
-- ✅ Variáveis de ambiente automáticas
+- ✅ Stack traces detalhados
+- ✅ Suporte async/await
 - ✅ Ideal para TDD
 
-### Modo 3: Gunicorn com Reload
+### Modo 3: Uvicorn com Múltiplos Workers (Teste de Produção)
 
 **Ideal para:** Testar em ambiente similar a produção
 
 ```bash
-# Gunicorn com reload
-uv run gunicorn --config api/gunicorn.conf.py \
-  --reload \
-  --log-level debug \
+# Uvicorn com múltiplos workers
+uv run uvicorn api.app:app \
+  --host 0.0.0.0 \
+  --port 5000 \
   --workers 2 \
-  api.app:app
+  --log-level info
 ```
 
 **Recursos:**
 
-- ✅ Auto-reload
 - ✅ Múltiplos workers
-- ✅ Logs detalhados
+- ✅ Logs estruturados
 - ⚡ Mais próximo de produção
 
 ---
 
 ## 🚀 Produção Local
 
-### Modo 1: Gunicorn com Configuração (Recomendado)
+### Modo 1: Uvicorn Production (Recomendado)
 
 **Ideal para:** Produção local, testes de carga
 
 ```bash
-# Iniciar com configuração padrão
-uv run gunicorn --config api/gunicorn.conf.py api.app:app
+# Iniciar com múltiplos workers
+uv run uvicorn api.app:app \
+  --host 0.0.0.0 \
+  --port 5000 \
+  --workers 4 \
+  --log-level info
 
 # Workers são calculados automaticamente: (CPU cores × 2) + 1
 # Logs vão para stdout/stderr
-# Health checks habilitados
 ```
 
 **Customizar workers:**
 
 ```bash
 # Forçar 4 workers
-GUNICORN_WORKERS=4 uv run gunicorn --config api/gunicorn.conf.py api.app:app
+uv run uvicorn api.app:app --workers 4 --host 0.0.0.0 --port 5000
 
 # Forçar 8 workers com log warning
-GUNICORN_WORKERS=8 LOG_LEVEL=warning \
-  uv run gunicorn --config api/gunicorn.conf.py api.app:app
+uv run uvicorn api.app:app --workers 8 --log-level warning --host 0.0.0.0 --port 5000
 ```
 
-### Modo 2: Gunicorn Inline (Sem config)
+### Modo 2: Uvicorn com Gunicorn (Máxima Performance)
 
-**Ideal para:** Testes rápidos de produção
+**Ideal para:** Alta concorrência e performance
 
 ```bash
-# Configuração inline
+# Usando Gunicorn como process manager com Uvicorn workers
 uv run gunicorn api.app:app \
   --workers 4 \
-  --worker-class sync \
+  --worker-class uvicorn.workers.UvicornWorker \
   --bind 0.0.0.0:5000 \
   --timeout 30 \
   --max-requests 1000 \
@@ -123,7 +121,7 @@ uv run gunicorn api.app:app \
 curl http://localhost:5000/health
 
 # Verificar workers (outro terminal)
-ps aux | grep gunicorn
+ps aux | grep uvicorn
 
 # Testar carga (requer wrk ou ab)
 wrk -t4 -c100 -d30s http://localhost:5000/health
@@ -166,7 +164,7 @@ docker build -f Dockerfile.api -t repair-agent-api:latest .
 docker run -d \
   --name repair-agent-api \
   -p 5000:5000 \
-  -e GUNICORN_WORKERS=4 \
+  -e UVICORN_WORKERS=4 \
   -e LOG_LEVEL=info \
   -e OLLAMA_BASE_URL=http://host.docker.internal:11434 \
   -v $(pwd)/chroma_db:/app/chroma_db:ro \
@@ -187,17 +185,17 @@ docker exec repair-agent-api curl -f http://localhost:5000/health
 services:
   api:
     environment:
-      - GUNICORN_WORKERS=8  # Customizar
+      - UVICORN_WORKERS=8  # Customizar
 
 # Ou via linha de comando para testes
-docker run -e GUNICORN_WORKERS=8 ...
+docker run -e UVICORN_WORKERS=8 ...
 ```
 
 ---
 
 ## ⚙️ Configurações Avançadas
 
-### Gunicorn com Systemd (Linux)
+### Uvicorn com Systemd (Linux)
 
 **Ideal para:** Servidores Linux dedicados
 
@@ -212,14 +210,17 @@ Description=Repair Agent API
 After=network.target
 
 [Service]
-Type=notify
+Type=simple
 User=www-data
 Group=www-data
 WorkingDirectory=/opt/repair-agent
 Environment="PATH=/opt/repair-agent/.venv/bin"
-ExecStart=/opt/repair-agent/.venv/bin/gunicorn \
-  --config /opt/repair-agent/api/gunicorn.conf.py \
-  api.app:app
+ExecStart=/opt/repair-agent/.venv/bin/uvicorn \
+  api.app:app \
+  --host 0.0.0.0 \
+  --port 5000 \
+  --workers 4 \
+  --log-level info
 ExecReload=/bin/kill -s HUP $MAINPID
 KillMode=mixed
 TimeoutStopSec=5
@@ -313,10 +314,10 @@ watch -n 5 'curl -s http://localhost:5000/health | jq'
 ### Logs
 
 ```bash
-# Desenvolvimento (Flask)
-# Logs vão automaticamente para console
+# Desenvolvimento (Uvicorn)
+# Logs vão automaticamente para console com cores
 
-# Produção (Gunicorn)
+# Produção (Uvicorn)
 # Logs vão para stdout/stderr por padrão
 
 # Docker
@@ -334,10 +335,10 @@ docker logs --tail 100 repair-agent-api
 
 ```bash
 # Processos e memória
-ps aux | grep gunicorn
+ps aux | grep uvicorn
 
 # CPU e RAM (htop)
-htop -p $(pgrep -f gunicorn)
+htop -p $(pgrep -f uvicorn)
 
 # Requests por segundo (com wrk)
 wrk -t4 -c100 -d30s --latency http://localhost:5000/health
@@ -367,17 +368,14 @@ done
 
 ## 🔄 Graceful Restart
 
-### Gunicorn
+### Uvicorn
 
 ```bash
-# HUP: Reload configuração e código (zero downtime)
+# HUP: Reload workers (zero downtime)
 kill -HUP <master_pid>
 
 # TERM: Graceful shutdown (espera requisições terminarem)
 kill -TERM <master_pid>
-
-# QUIT: Graceful shutdown com timeout
-kill -QUIT <master_pid>
 
 # Docker
 docker kill -s HUP repair-agent-api
@@ -407,7 +405,7 @@ sudo systemctl restart repair-agent-api
 lsof -i :5000
 
 # Verificar dependências
-uv pip list | grep -E 'flask|gunicorn'
+uv pip list | grep -E 'fastapi|uvicorn'
 
 # Verificar Ollama
 curl http://localhost:11434/api/tags
@@ -417,17 +415,17 @@ curl http://localhost:11434/api/tags
 
 ```bash
 # Aumentar timeout
-GUNICORN_TIMEOUT=60 uv run gunicorn ...
+uv run uvicorn api.app:app --timeout-keep-alive 60 --workers 4
 
-# Ou editar api/gunicorn.conf.py:
-timeout = 60
+# Verificar logs
+docker logs repair-agent-api
 ```
 
 ### Performance ruim
 
 ```bash
 # Aumentar workers
-GUNICORN_WORKERS=8 uv run gunicorn ...
+uv run uvicorn api.app:app --workers 8
 
 # Verificar CPU
 htop
@@ -440,7 +438,7 @@ free -h
 
 ```bash
 # Forçar unbuffered output
-PYTHONUNBUFFERED=1 uv run gunicorn ...
+PYTHONUNBUFFERED=1 uv run uvicorn api.app:app
 
 # Docker
 docker run -e PYTHONUNBUFFERED=1 ...

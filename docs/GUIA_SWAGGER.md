@@ -1,6 +1,42 @@
 # 🧪 Testando a API do Repair Agent
 
-## 🌐 Swagger UI (Mais Fácil!)
+## 🌐 Documentação Interativa
+
+A API usa **FastAPI**, que gera documentação OpenAPI 3.0 automaticamente a partir do código Python. Você tem duas opções de interface:
+
+### 📘 Swagger UI (Interativa)
+
+Interface oficial do OpenAPI para testar endpoints:
+
+```sh
+http://localhost:5000/docs
+```
+
+**Recursos:**
+
+- ✅ Testar endpoints diretamente no navegador
+- ✅ Ver esquemas de request/response
+- ✅ Autenticação integrada
+- ✅ Exemplos de código
+
+### 📗 ReDoc (Somente Leitura)
+
+Documentação alternativa mais limpa e organizada:
+
+```sh
+http://localhost:5000/redoc
+```
+
+**Recursos:**
+
+- ✅ Design limpo e responsivo
+- ✅ Navegação por tags
+- ✅ Exemplos de código
+- ✅ Melhor para leitura e compartilhamento
+
+---
+
+## 🧪 Testando no Swagger UI
 
 ### 1. Acessar Swagger
 
@@ -34,14 +70,14 @@ http://localhost:5000/docs
 2. Clique em "Try it out"
 3. Cole este JSON no campo "Request body":
 
-```json
-{
-  "message": "Como consertar uma torneira pingando?",
-  "session_id": "swagger-test-001",
-  "use_rag": true,
-  "use_web_search": false
-}
-```
+    ```json
+    {
+      "message": "Como consertar uma torneira pingando?",
+      "session_id": "swagger-test-001",
+      "use_rag": true,
+      "use_web_search": false
+    }
+    ```
 
 4. Clique em "Execute"
 5. Aguarde (pode demorar ~5-10 segundos)
@@ -93,7 +129,7 @@ Crie uma nova Collection chamada "Repair Agent API"
 **URL**: `http://localhost:5000/api/v1/chat/message`  
 **Headers**:
 
-```
+```text
 Content-Type: application/json
 ```
 
@@ -131,7 +167,7 @@ Content-Type: application/json
 **URL**: `http://localhost:5000/api/v1/chat/message`  
 **Headers**:
 
-```
+```text
 Content-Type: application/json
 ```
 

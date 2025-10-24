@@ -1,4 +1,4 @@
-# Dockerfile para a API Flask
+# Dockerfile para a API
 FROM python:3.13-slim
 
 WORKDIR /app
@@ -26,12 +26,11 @@ RUN mkdir -p /app/chroma_db /app/pdfs
 EXPOSE 5000
 
 ENV PYTHONUNBUFFERED=1 \
-    GUNICORN_WORKERS=4 \
-    GUNICORN_RELOAD=false \
+    UVICORN_WORKERS=4 \
     LOG_LEVEL=info
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:5000/health || exit 1
 
-CMD ["gunicorn", "--config", "api/gunicorn.conf.py", "api.app:app"]
+CMD ["uvicorn", "api.app:app", "--host", "0.0.0.0", "--port", "5000", "--workers", "4"]

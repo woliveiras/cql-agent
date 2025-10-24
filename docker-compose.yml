@@ -19,8 +19,8 @@ services:
       - "5000:5000"
     environment:
       - OLLAMA_BASE_URL=http://ollama:11434
-      - FLASK_ENV=production
       - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=info
     volumes:
       - ./chroma_db:/app/chroma_db
       - ./pdfs:/app/pdfs:ro

@@ -64,6 +64,6 @@ pdfs/*.pdf
 # RAG cache
 rag/__pycache__/
 
-# Flask
+# API
 instance/
 .pytest_cache/
