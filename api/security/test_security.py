@@ -400,5 +400,117 @@ class TestContentGuardrail:
         assert 'repetição' in result['reason'].lower()
 
 
+class TestFuzzyMatching:
+    """Testes para fuzzy matching de keywords"""
+
+    def test_fuzzy_match_typos(self):
+        """Testa detecção de keywords com typos comuns"""
+        guardrail = ContentGuardrail()
+
+        # Typos comuns que devem ser detectados
+        test_cases = [
+            ("Como consertar tornera pingando?", ["torneira"]),  # tornera → torneira
+            ("Preciso arrumar fechadra da porta", ["fechadura", "porta"]),  # fechadra → fechadura
+            ("Vazameto no cano", ["vazamento", "cano"]),  # vazameto → vazamento
+            ("Chuvero não funciona", ["chuveiro"]),  # chuvero → chuveiro
+            ("Problema com encanamento", ["encanamento", "problema"]),  # palavra válida
+        ]
+
+        for message, expected_keywords in test_cases:
+            matched, corrections = guardrail._fuzzy_match_keywords(message)
+
+            # Verifica se pelo menos uma keyword esperada foi encontrada
+            found_keywords = [kw for kw in expected_keywords if kw in matched]
+            assert len(found_keywords) > 0, (
+                f"Esperava encontrar {expected_keywords} em '{message}', "
+                f"mas encontrou apenas {matched}, correções: {corrections}"
+            )
+
+    def test_fuzzy_match_validation_accepts_typos(self):
+        """Testa que mensagens com typos passam na validação"""
+        guardrail = ContentGuardrail()
+
+        # Mensagens com typos que devem ser aceitas
+        valid_messages = [
+            "Como consertar tornera pingando?",
+            "Preciso arrumar fechadra",
+            "Vazameto no banhero",
+            "Chuvero quebrado",
+            "Problema com tubulasao"
+        ]
+
+        for message in valid_messages:
+            result = guardrail.validate(message)
+            assert result['is_valid'], (
+                f"Mensagem '{message}' deveria ser válida (com fuzzy matching), "
+                f"mas foi rejeitada: {result.get('reason')}"
+            )
+            assert result['score'] > 0.1, (
+                f"Score muito baixo para '{message}': {result['score']}"
+            )
+
+    def test_fuzzy_match_threshold(self):
+        """Testa que o threshold de similaridade funciona"""
+        guardrail = ContentGuardrail()
+
+        # Palavra muito diferente (não deve dar match)
+        message = "Como fazer bolo de chocolate?"
+        matched, corrections = guardrail._fuzzy_match_keywords(message)
+
+        # Não deve encontrar nenhuma keyword de reparo
+        assert len(matched) == 0, (
+            f"Não deveria encontrar keywords em '{message}', "
+            f"mas encontrou: {matched}"
+        )
+
+    def test_fuzzy_match_exact_has_priority(self):
+        """Testa que matches exatos têm prioridade sobre fuzzy"""
+        guardrail = ContentGuardrail()
+
+        # Mensagem com palavra exata
+        message = "Como consertar torneira pingando?"
+        matched, corrections = guardrail._fuzzy_match_keywords(message)
+
+        # Deve encontrar "torneira" e "consertar"
+        assert "torneira" in matched
+        assert "consertar" in matched
+
+        # Não deve haver correções (matches exatos)
+        assert "torneira" not in corrections
+        assert "consertar" not in corrections
+
+    def test_fuzzy_match_multiple_variations(self):
+        """Testa múltiplas variações da mesma palavra"""
+        guardrail = ContentGuardrail()
+
+        # Variações da palavra "consertar"
+        variations = [
+            "conserto",  # substantivo
+            "concerto",  # erro comum
+            "consertár",  # acento errado
+            "consertta"  # duplicação de letra
+        ]
+
+        for variation in variations:
+            message = f"Como fazer {variation} da torneira?"
+            matched, corrections = guardrail._fuzzy_match_keywords(message)
+
+            # Deve encontrar pelo menos uma keyword
+            assert len(matched) >= 1, (
+                f"Deveria encontrar keywords para variação '{variation}'"
+            )
+
+    def test_fuzzy_match_short_words_ignored(self):
+        """Testa que palavras muito curtas são ignoradas"""
+        guardrail = ContentGuardrail()
+
+        # Mensagem com palavras curtas
+        message = "Eu vi um oi na tv"
+        matched, corrections = guardrail._fuzzy_match_keywords(message)
+
+        # Palavras de 1-2 letras devem ser ignoradas
+        assert len(matched) == 0
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

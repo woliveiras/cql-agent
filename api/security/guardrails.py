@@ -8,6 +8,7 @@ import math
 import logging
 from typing import Dict, List, Optional, Tuple, Pattern
 from collections import Counter
+from rapidfuzz import fuzz, process
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,10 @@ class ContentGuardrail:
     MAX_CHAR_REPETITION = 5         # Máximo de caracteres iguais consecutivos
     MAX_SEQUENCE_REPETITION = 3     # Máximo de sequências repetidas
     MIN_SEQUENCE_LENGTH = 3         # Tamanho mínimo de sequência para detectar
+
+    # Configurações de fuzzy matching
+    FUZZY_THRESHOLD = 85            # Limiar de similaridade (0-100)
+    FUZZY_MAX_MATCHES = 3           # Máximo de matches por palavra
 
     # Palavras-chave relacionadas a reparos residenciais
     REPAIR_KEYWORDS = [
@@ -155,6 +160,75 @@ class ContentGuardrail:
             f"question_patterns={len(self.question_patterns)}, "
             f"prohibited_patterns={len(self.prohibited_patterns)}"
         )
+
+    def _fuzzy_match_keywords(
+        self,
+        message: str,
+        threshold: int = None
+    ) -> Tuple[List[str], Dict[str, str]]:
+        """
+        Usa fuzzy matching para detectar keywords com typos ou variações
+
+        Detecta palavras similares às keywords mesmo com erros de digitação:
+        - "tornera" → "torneira" (typo comum)
+        - "conserto" → "consertar" (variação)
+        - "vaza mento" → "vazamento" (espaço extra)
+        - "fechadra" → "fechadura" (troca de letras)
+
+        Args:
+            message: Mensagem a ser analisada
+            threshold: Limiar de similaridade (0-100). Usa FUZZY_THRESHOLD se None
+
+        Returns:
+            (matched_keywords, corrections_map)
+            - matched_keywords: Lista de keywords encontradas (originais)
+            - corrections_map: Dict mapeando palavras do usuário para keywords {typo: correct}
+
+        Examples:
+            >>> guardrail._fuzzy_match_keywords("como consertar tornera pingando")
+            (['torneira', 'consertar'], {'tornera': 'torneira'})
+        """
+        if threshold is None:
+            threshold = self.FUZZY_THRESHOLD
+
+        # Normaliza a mensagem
+        message_lower = message.lower()
+        words = re.findall(r'\b\w+\b', message_lower)
+
+        matched_keywords = set()
+        corrections_map = {}
+
+        # Para cada palavra na mensagem
+        for word in words:
+            if len(word) < 3:  # Ignora palavras muito curtas
+                continue
+
+            # Verifica match exato primeiro (mais rápido)
+            if word in self.REPAIR_KEYWORDS:
+                matched_keywords.add(word)
+                continue
+
+            # Usa fuzzy matching para encontrar palavras similares
+            matches = process.extract(
+                word,
+                self.REPAIR_KEYWORDS,
+                scorer=fuzz.ratio,
+                score_cutoff=threshold,
+                limit=self.FUZZY_MAX_MATCHES
+            )
+
+            if matches:
+                # Pega o melhor match
+                best_match, score, _ = matches[0]
+                matched_keywords.add(best_match)
+                corrections_map[word] = best_match
+
+                logger.debug(
+                    f"Fuzzy match: '{word}' → '{best_match}' "
+                    f"(score: {score})"
+                )
+
+        return list(matched_keywords), corrections_map
 
     def _calculate_entropy(self, message: str) -> float:
         """
@@ -370,27 +444,39 @@ class ContentGuardrail:
 
     def _check_repair_relevance(self, message: str) -> float:
         """
-        Calcula score de relevância para reparos residenciais usando patterns pré-compilados
+        Calcula score de relevância para reparos residenciais
+
+        Usa múltiplas estratégias:
+        1. Fuzzy matching para detectar keywords com typos
+        2. Patterns de pergunta pré-compilados
+        3. Score combinado ponderado
 
         Returns:
             Score de 0.0 a 1.0
         """
-        message_lower = message.lower()
+        # 1. Usa fuzzy matching para encontrar keywords (detecta typos)
+        matched_keywords, corrections = self._fuzzy_match_keywords(message)
+        keyword_count = len(matched_keywords)
 
-        # Conta keywords encontradas
-        keyword_count = sum(1 for keyword in self.REPAIR_KEYWORDS if keyword in message_lower)
+        # Log das correções aplicadas
+        if corrections:
+            logger.info(f"Fuzzy corrections applied: {corrections}")
 
-        # Verifica padrões de pergunta usando patterns compilados
+        # 2. Verifica padrões de pergunta usando patterns compilados
         pattern_matches = sum(1 for pattern in self.question_patterns if pattern.search(message))
 
-        # Calcula score
+        # 3. Calcula scores parciais
         keyword_score = min(keyword_count / 3, 1.0)  # Normaliza em 3 keywords
         pattern_score = min(pattern_matches / 2, 1.0)  # Normaliza em 2 padrões
 
-        # Média ponderada
+        # 4. Média ponderada (keywords têm mais peso que patterns)
         final_score = (keyword_score * 0.7) + (pattern_score * 0.3)
 
-        logger.debug(f"Relevance score: {final_score:.2f} (keywords: {keyword_count}, patterns: {pattern_matches})")
+        logger.debug(
+            f"Relevance score: {final_score:.2f} "
+            f"(keywords: {keyword_count}, patterns: {pattern_matches}, "
+            f"corrections: {len(corrections)})"
+        )
 
         return final_score
 
