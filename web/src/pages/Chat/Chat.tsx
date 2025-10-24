@@ -41,11 +41,11 @@ export function Chat() {
 
   // Enviar mensagem inicial se vier da página Welcome
   useEffect(() => {
-    if (initialMessage && messages.length === 0 && !hasInitialized.current) {
+    if (initialMessage && messages.length === 0 && !hasInitialized.current && !maxAttemptsReached) {
       hasInitialized.current = true;
       handleSend(initialMessage);
     }
-  }, [initialMessage, messages.length]);
+  }, [initialMessage, messages.length, maxAttemptsReached]);
 
   const handleSend = async (messageText?: string) => {
     const textToSend = messageText || inputValue.trim();
@@ -86,8 +86,8 @@ export function Chat() {
         setWaitingFeedback(true);
       }
       
-      // Se atingiu o máximo de tentativas
-      if (response.state === 'max_attempts') {
+      // Se atingiu o máximo de tentativas ou o problema foi resolvido
+      if (response.state === 'max_attempts' || response.state === 'resolved') {
         setMaxAttemptsReached(true);
       }
     } catch (err) {
@@ -131,7 +131,7 @@ export function Chat() {
   const handleNewConsultation = () => {
     startNewConversation();
     setMaxAttemptsReached(false);
-    hasInitialized.current = false;
+    // Não reseta hasInitialized para evitar reenvio da mensagem inicial
   };
 
   return (
@@ -172,8 +172,8 @@ export function Chat() {
         {maxAttemptsReached ? (
           <NewConsultationContainer>
             <NewConsultationText>
-              Não conseguimos resolver seu problema nesta sessão. 
-              Que tal começar uma nova consulta?
+              Esta consulta foi finalizada. 
+              Precisa de ajuda com outro reparo?
             </NewConsultationText>
             <NewConsultationButton onClick={handleNewConsultation}>
               🔧 Nova Consulta
