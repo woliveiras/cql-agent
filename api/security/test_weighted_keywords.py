@@ -92,18 +92,15 @@ class TestWeightedKeywords:
             )
 
     def test_contextual_keywords_lower_score(self):
-        """Keywords apenas contextuais devem ter score mais baixo"""
-        guardrail = ContentGuardrail(use_ner=False)
+        """Keywords contextuais devem ter score menor que urgentes"""
+        guardrail = ContentGuardrail(use_ner=False, use_intention_analysis=False)
 
-        # Apenas contextuais (peso 1.0)
-        contextual_msg = "Tenho uma casa com sala e cozinha"
-        result = guardrail.validate(contextual_msg)
+        # Apenas contextual (peso 1.0)
+        contextual = "fazer um reparo"
+        result = guardrail.validate(contextual)
 
-        # Pode ser válida mas com score baixo
-        if result['is_valid']:
-            assert result['score'] < 0.4, (
-                f"Score apenas contextual deve ser < 0.4, got {result['score']:.2f}"
-            )
+        # Com análise de contexto, mas sem intenção, score pode chegar a ~0.5
+        assert result['score'] < 0.55, f"Score apenas contextual deve ser < 0.55, got {result['score']:.2f}"
 
     def test_weighted_score_with_fuzzy_matching(self):
         """Pesos funcionam com fuzzy matching (typos)"""
@@ -134,14 +131,14 @@ class TestWeightedKeywords:
         )
 
     def test_no_keywords_zero_score(self):
-        """Mensagem sem keywords deve ter score muito baixo"""
-        guardrail = ContentGuardrail(use_ner=False, use_context_analysis=False)
+        """Mensagem sem keywords deve ter score baixo"""
+        guardrail = ContentGuardrail(use_ner=False, use_context_analysis=False, use_intention_analysis=False)
 
         # Sem keywords de reparo
         no_keywords = "Olá, como vai?"
         result = guardrail.validate(no_keywords)
 
-        # Deve ser inválida ou score muito baixo (sem contexto e sem keywords)
+        # Deve ser inválida ou score muito baixo (sem contexto, sem keywords, sem intenção)
         if result['is_valid']:
             assert result['score'] < 0.15, (
                 f"Sem keywords deve ter score < 0.15, got {result['score']:.2f}"

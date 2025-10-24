@@ -187,7 +187,8 @@ class ContentGuardrail:
         self,
         strict_mode: bool = False,
         use_ner: bool = True,
-        use_context_analysis: bool = True
+        use_context_analysis: bool = True,
+        use_intention_analysis: bool = True
     ):
         """
         Inicializa o guardrail
@@ -196,10 +197,12 @@ class ContentGuardrail:
             strict_mode: Se True, aplica validação mais rigorosa
             use_ner: Se True, usa NER para análise de entidades (recomendado)
             use_context_analysis: Se True, usa análise de contexto sintático (recomendado)
+            use_intention_analysis: Se True, usa análise de intenção comunicativa (recomendado)
         """
         self.strict_mode = strict_mode
         self.use_ner = use_ner
         self.use_context_analysis = use_context_analysis
+        self.use_intention_analysis = use_intention_analysis
 
         # Pré-compila todos os patterns regex para melhor performance
         self.question_patterns: List[Pattern] = [
@@ -217,10 +220,14 @@ class ContentGuardrail:
 
         # Context analyzer lazy loading
         self._context_analyzer = None
-
+        
+        # Intention analyzer lazy loading
+        self._intention_analyzer = None
+        
         logger.info(
             f"ContentGuardrail initialized: strict_mode={strict_mode}, "
             f"use_ner={use_ner}, use_context_analysis={use_context_analysis}, "
+            f"use_intention_analysis={use_intention_analysis}, "
             f"question_patterns={len(self.question_patterns)}, "
             f"prohibited_patterns={len(self.prohibited_patterns)}"
         )
@@ -242,6 +249,15 @@ class ContentGuardrail:
             self._context_analyzer = get_context_analyzer()
             logger.info("ContextAnalyzer loaded (lazy initialization)")
         return self._context_analyzer
+    
+    @property
+    def intention_analyzer(self):
+        """Lazy loading do Intention Analyzer (carrega apenas quando usado)"""
+        if self.use_intention_analysis and self._intention_analyzer is None:
+            from api.security.intention_analyzer import get_intention_analyzer
+            self._intention_analyzer = get_intention_analyzer()
+            logger.info("IntentionAnalyzer loaded (lazy initialization)")
+        return self._intention_analyzer
 
     def _fuzzy_match_keywords(
         self,
@@ -609,24 +625,81 @@ class ContentGuardrail:
                 f"complete_sentence={context_analysis.has_complete_sentence}, "
                 f"tokens={context_analysis.num_tokens}"
             )
+        
+        # Estratégia 3: Análise de intenção (pergunta vs comando vs afirmação)
+        intention_score = 0.0
+        intention_type = None
+        
+        if self.use_intention_analysis and self.intention_analyzer:
+            intention_analysis = self.intention_analyzer.analyze(message)
+            intention_type = intention_analysis.intention_type
+            intention_confidence = intention_analysis.confidence
+            
+            # Perguntas e comandos são altamente relevantes para um agente de reparos
+            if intention_type.value == "question":
+                intention_score = 0.85 * intention_confidence  # Perguntas são muito relevantes
+            elif intention_type.value == "command":
+                intention_score = 0.90 * intention_confidence  # Comandos ainda mais relevantes
+            else:  # statement
+                intention_score = 0.60 * intention_confidence  # Afirmações menos relevantes
+            
+            logger.debug(
+                f"Intention analysis: type={intention_type.value}, "
+                f"confidence={intention_confidence:.2f}, "
+                f"score={intention_score:.2f}, "
+                f"interrogative={intention_analysis.has_interrogative}, "
+                f"modal={intention_analysis.has_modal_verb}"
+            )
 
-        # Estratégia 3: Fuzzy matching (detecta typos) - SEMPRE executa
+        # Estratégia 4: Fuzzy matching (detecta typos) - SEMPRE executa
         matched_keywords, corrections = self._fuzzy_match_keywords(message)
 
         # Log das correções aplicadas
         if corrections:
             logger.info(f"Fuzzy corrections applied: {corrections}")
 
-        # Estratégia 4: Verifica padrões de pergunta
+        # Estratégia 5: Verifica padrões de pergunta
         pattern_matches = sum(1 for pattern in self.question_patterns if pattern.search(message))
 
-        # Estratégia 5: Calcula score ponderado de keywords
+        # Estratégia 6: Calcula score ponderado de keywords
         keyword_score = self._calculate_weighted_keyword_score(matched_keywords)
         pattern_score = min(pattern_matches / 2, 1.0)  # Normaliza em 2 padrões
 
-        # Estratégia 6: Combina scores de forma inteligente
-        if self.use_ner and self.ner:
-            # Se NER encontrou bom contexto, usa como base
+        # Estratégia 7: Combina scores de forma inteligente
+        # Prioriza intenção (perguntas/comandos) > NER > contexto > keywords > patterns
+        
+        if self.use_intention_analysis and self.intention_analyzer and intention_type:
+            # Com análise de intenção (mais completo)
+            if self.use_ner and self.ner and has_repair_context:
+                # Tudo habilitado + contexto de reparo
+                # Intention (35%), NER (30%), context (20%), keywords (10%), patterns (5%)
+                final_score = (
+                    (intention_score * 0.35) +
+                    (ner_score * 0.30) +
+                    (context_score * 0.20) +
+                    (keyword_score * 0.10) +
+                    (pattern_score * 0.05)
+                )
+            elif self.use_ner and self.ner:
+                # Com NER mas sem contexto forte
+                # Intention (40%), keywords (25%), context (20%), NER (10%), patterns (5%)
+                final_score = (
+                    (intention_score * 0.40) +
+                    (keyword_score * 0.25) +
+                    (context_score * 0.20) +
+                    (ner_score * 0.10) +
+                    (pattern_score * 0.05)
+                )
+            else:
+                # Sem NER: Intention (45%), context (30%), keywords (20%), patterns (5%)
+                final_score = (
+                    (intention_score * 0.45) +
+                    (context_score * 0.30) +
+                    (keyword_score * 0.20) +
+                    (pattern_score * 0.05)
+                )
+        elif self.use_ner and self.ner:
+            # Sem intenção, mas com NER (fallback ao scoring antigo)
             if has_repair_context:
                 # Média ponderada: NER (50%), context (25%), keywords (15%), patterns (10%)
                 final_score = (
@@ -645,7 +718,7 @@ class ContentGuardrail:
                     (pattern_score * 0.15)
                 )
         elif self.use_context_analysis and self.context_analyzer:
-            # Sem NER, mas com análise de contexto
+            # Sem NER nem intention, mas com análise de contexto
             # Média ponderada: keywords (40%), context (35%), patterns (25%)
             final_score = (
                 (keyword_score * 0.40) +
@@ -658,9 +731,9 @@ class ContentGuardrail:
 
         logger.debug(
             f"Relevance score: {final_score:.2f} "
-            f"(weighted_keywords: {keyword_score:.2f}, context: {context_score:.2f}, "
-            f"patterns: {pattern_matches}, corrections: {len(corrections)}, "
-            f"ner_score: {ner_score:.2f})"
+            f"(intention: {intention_score:.2f}, weighted_keywords: {keyword_score:.2f}, "
+            f"context: {context_score:.2f}, ner: {ner_score:.2f}, "
+            f"patterns: {pattern_matches}, corrections: {len(corrections)})"
         )
 
         return final_score
