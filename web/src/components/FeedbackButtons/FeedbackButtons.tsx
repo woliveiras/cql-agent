@@ -8,18 +8,10 @@ interface FeedbackButtonsProps {
 export function FeedbackButtons({ onFeedback, disabled }: FeedbackButtonsProps) {
   return (
     <ButtonContainer>
-      <FeedbackButton
-        variant="yes"
-        onClick={() => onFeedback('sim')}
-        disabled={disabled}
-      >
+      <FeedbackButton variant="yes" onClick={() => onFeedback('sim')} disabled={disabled}>
         ✓ Sim
       </FeedbackButton>
-      <FeedbackButton
-        variant="no"
-        onClick={() => onFeedback('não')}
-        disabled={disabled}
-      >
+      <FeedbackButton variant="no" onClick={() => onFeedback('não')} disabled={disabled}>
         ✗ Não
       </FeedbackButton>
     </ButtonContainer>

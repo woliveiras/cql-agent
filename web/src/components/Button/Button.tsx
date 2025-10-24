@@ -1,5 +1,5 @@
+import { LoadingSpinner, StyledButton } from './Button.styles';
 import type { ButtonProps } from './types';
-import { StyledButton, LoadingSpinner } from './Button.styles';
 
 export const Button = ({
   variant = 'primary',

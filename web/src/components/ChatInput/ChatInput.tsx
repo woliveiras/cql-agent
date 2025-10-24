@@ -1,12 +1,12 @@
-import { useRef, useEffect, type KeyboardEvent } from 'react';
-import type { ChatInputProps } from './types';
+import { type KeyboardEvent, useEffect, useRef } from 'react';
 import {
+  CharCounter,
   Container,
   InputWrapper,
-  StyledTextarea,
-  CharCounter,
   SendButton,
+  StyledTextarea,
 } from './ChatInput.styles';
+import type { ChatInputProps } from './types';
 
 export function ChatInput({
   value,
@@ -25,7 +25,7 @@ export function ChatInput({
       textarea.style.height = '120px';
       textarea.style.height = `${Math.min(textarea.scrollHeight, 240)}px`;
     }
-  }, [value]);
+  }, []);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     // Send on Enter (without Shift)
@@ -65,7 +65,7 @@ export function ChatInput({
           </CharCounter>
         )}
       </InputWrapper>
-      
+
       <SendButton
         onClick={handleSendClick}
         disabled={!canSend}

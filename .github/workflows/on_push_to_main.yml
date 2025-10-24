@@ -19,7 +19,6 @@ jobs:
           node-version: '20.x'
       
       - name: Install pnpm
-        working-directory: ./web
         run: corepack enable && corepack prepare pnpm@latest --activate
 
       - name: Cache pnpm modules

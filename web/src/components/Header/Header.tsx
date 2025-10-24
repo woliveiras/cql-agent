@@ -1,8 +1,8 @@
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Button } from '../Button';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useChatStore } from '../../store/chat';
-import type { HeaderProps } from './types';
+import { Button } from '../Button';
 import { HeaderContainer, HeaderContent, Logo, LogoIcon, Nav } from './Header.styles';
+import type { HeaderProps } from './types';
 
 export const Header = ({ onNewChat }: HeaderProps) => {
   const navigate = useNavigate();
@@ -19,7 +19,7 @@ export const Header = ({ onNewChat }: HeaderProps) => {
     } else {
       // Inicia nova conversa e redireciona para home
       startNewConversation();
-      
+
       // Se já estiver na home, apenas recarrega
       if (location.pathname === '/') {
         window.location.reload();

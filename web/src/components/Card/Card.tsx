@@ -1,5 +1,5 @@
-import type { CardProps } from './types';
 import { StyledCard } from './Card.styles';
+import type { CardProps } from './types';
 
 export const Card = ({
   variant = 'elevated',

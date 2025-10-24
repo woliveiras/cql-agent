@@ -1,2 +1,2 @@
+export type { ChatActions, ChatState, ChatStore } from './types';
 export { useChatStore } from './useChatStore';
-export type { ChatState, ChatActions, ChatStore } from './types';

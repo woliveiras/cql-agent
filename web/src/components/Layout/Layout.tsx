@@ -1,6 +1,6 @@
 import { Header } from '../Header';
-import type { LayoutProps } from './types';
 import { LayoutContainer, MainContent } from './Layout.styles';
+import type { LayoutProps } from './types';
 
 export const Layout = ({ children, showHeader = true }: LayoutProps) => {
   return (

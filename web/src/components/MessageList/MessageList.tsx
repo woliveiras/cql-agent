@@ -1,14 +1,14 @@
 import { useEffect, useRef } from 'react';
-import { MessageBubble } from '../MessageBubble';
 import { Avatar } from '../Avatar';
 import { LoadingIndicator } from '../LoadingIndicator';
-import type { MessageListProps } from './types';
+import { MessageBubble } from '../MessageBubble';
 import {
   Container,
-  MessagesWrapper,
   EmptyStateContainer,
   LoadingContainer,
+  MessagesWrapper,
 } from './MessageList.styles';
+import type { MessageListProps } from './types';
 
 export function MessageList({
   messages,
@@ -23,7 +23,7 @@ export function MessageList({
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isLoading]);
+  }, []);
 
   if (messages.length === 0 && !isLoading) {
     return (

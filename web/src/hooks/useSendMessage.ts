@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
+import type { ApiError, ChatMessageRequest, ChatMessageResponse } from '../services';
 import { chatService } from '../services';
-import type { ChatMessageRequest, ChatMessageResponse, ApiError } from '../services';
 
 export function useSendMessage() {
   return useMutation<ChatMessageResponse, ApiError, ChatMessageRequest>({

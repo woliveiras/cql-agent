@@ -33,9 +33,7 @@ export const MessageBubbleStyled = styled.div<{ role: MessageRole; theme?: Theme
       ? props.theme?.colors.primary.main || '#DC2626'
       : props.theme?.colors.background.paper || '#F8FAFC'};
   color: ${(props) =>
-    props.role === 'user'
-      ? '#FFFFFF'
-      : props.theme?.colors.text.primary || '#0F172A'};
+    props.role === 'user' ? '#FFFFFF' : props.theme?.colors.text.primary || '#0F172A'};
   line-height: ${(props) => props.theme?.typography.lineHeight.relaxed || 1.625};
   font-size: ${(props) => props.theme?.typography.fontSize.base || '1rem'};
   word-wrap: break-word;

@@ -1,6 +1,6 @@
 import styled from '@emotion/styled';
 import type { Theme } from '../../styles/types';
-import type { ButtonVariant, ButtonSize } from './types';
+import type { ButtonSize, ButtonVariant } from './types';
 
 interface StyledButtonProps {
   variant: ButtonVariant;

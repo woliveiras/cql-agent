@@ -15,10 +15,10 @@ interface FeedbackButtonProps {
 export const FeedbackButton = styled.button<FeedbackButtonProps>`
   padding: 0.625rem 1.25rem;
   border-radius: ${({ theme }) => (theme as Theme).borderRadius.md};
-  border: 2px solid ${({ theme, variant }) => 
+  border: 2px solid ${({ theme, variant }) =>
     variant === 'yes' ? (theme as Theme).colors.success.main : (theme as Theme).colors.error.main};
   background-color: ${({ theme }) => (theme as Theme).colors.background.paper};
-  color: ${({ theme, variant }) => 
+  color: ${({ theme, variant }) =>
     variant === 'yes' ? (theme as Theme).colors.success.main : (theme as Theme).colors.error.main};
   font-size: 0.875rem;
   font-weight: 600;
@@ -27,14 +27,14 @@ export const FeedbackButton = styled.button<FeedbackButtonProps>`
   min-width: 100px;
 
   &:hover:not(:disabled) {
-    background-color: ${({ theme, variant }) => 
-      variant === 'yes' ? (theme as Theme).colors.success.main : (theme as Theme).colors.error.main};
+    background-color: ${({ theme, variant }) =>
+      variant === 'yes'
+        ? (theme as Theme).colors.success.main
+        : (theme as Theme).colors.error.main};
     color: ${({ theme }) => (theme as Theme).colors.background.paper};
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px ${({ variant }) => 
-      variant === 'yes' 
-        ? 'rgba(22, 163, 74, 0.3)' 
-        : 'rgba(220, 38, 38, 0.3)'};
+    box-shadow: 0 4px 12px ${({ variant }) =>
+      variant === 'yes' ? 'rgba(22, 163, 74, 0.3)' : 'rgba(220, 38, 38, 0.3)'};
   }
 
   &:active:not(:disabled) {

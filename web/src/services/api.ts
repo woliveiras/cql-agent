@@ -26,10 +26,10 @@ api.interceptors.response.use(
   (response) => response,
   (error: AxiosError<{ detail?: string | { error?: string; details?: string } }>) => {
     let errorMessage = 'Erro desconhecido';
-    
+
     if (error.response?.data) {
       const data = error.response.data;
-      
+
       // Backend pode retornar detail como string ou objeto
       if (typeof data.detail === 'string') {
         errorMessage = data.detail;
@@ -39,12 +39,12 @@ api.interceptors.response.use(
     } else if (error.message) {
       errorMessage = error.message;
     }
-    
+
     const apiError: ApiError = {
       detail: errorMessage,
       status: error.response?.status || 500,
     };
-    
+
     // Log para debug
     console.error('API Error:', {
       status: apiError.status,
@@ -53,7 +53,7 @@ api.interceptors.response.use(
       method: error.config?.method,
       data: error.config?.data,
     });
-    
+
     return Promise.reject(apiError);
   }
 );

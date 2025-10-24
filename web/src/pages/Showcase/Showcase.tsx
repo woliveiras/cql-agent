@@ -1,10 +1,10 @@
-import styled from '@emotion/styled';
 import { useTheme } from '@emotion/react';
-import type { Theme } from '../../styles/types';
-import { Button } from '../../components/Button';
-import { Input, Textarea } from '../../components/Input';
-import { Card } from '../../components/Card';
+import styled from '@emotion/styled';
 import { Avatar } from '../../components/Avatar';
+import { Button } from '../../components/Button';
+import { Card } from '../../components/Card';
+import { Input, Textarea } from '../../components/Input';
+import type { Theme } from '../../styles/types';
 
 const Container = styled.div<{ theme?: Theme }>`
   max-width: 1200px;
@@ -23,7 +23,7 @@ const Title = styled.h1<{ theme?: Theme }>`
   margin-bottom: ${(props) => props.theme?.spacing.md || '1rem'};
 `;
 
-const Subtitle = styled.p<{ theme?: Theme}>`
+const Subtitle = styled.p<{ theme?: Theme }>`
   font-size: ${(props) => props.theme?.typography.fontSize.lg || '1.125rem'};
   color: ${(props) => props.theme?.colors.text.secondary || '#475569'};
 `;
@@ -99,9 +99,7 @@ export function Showcase() {
     <Container>
       <Header>
         <Title>🎨 RepairChat - Design System</Title>
-        <Subtitle>
-          Componentes e estilos da interface de chat para reparos residenciais
-        </Subtitle>
+        <Subtitle>Componentes e estilos da interface de chat para reparos residenciais</Subtitle>
       </Header>
 
       {/* Cores */}
@@ -166,19 +164,35 @@ export function Showcase() {
         <SectionTitle>Tipografia</SectionTitle>
         <ComponentCard>
           <ComponentName>Tamanhos de Fonte</ComponentName>
-          <ComponentDemo style={{ flexDirection: 'column', alignItems: 'flex-start', width: '100%' }}>
-            <div style={{ fontSize: theme.typography.fontSize['4xl'], marginBottom: theme.spacing.sm }}>
+          <ComponentDemo
+            style={{ flexDirection: 'column', alignItems: 'flex-start', width: '100%' }}
+          >
+            <div
+              style={{ fontSize: theme.typography.fontSize['4xl'], marginBottom: theme.spacing.sm }}
+            >
               Heading 1 - 36px
             </div>
-            <div style={{ fontSize: theme.typography.fontSize['3xl'], marginBottom: theme.spacing.sm }}>
+            <div
+              style={{ fontSize: theme.typography.fontSize['3xl'], marginBottom: theme.spacing.sm }}
+            >
               Heading 2 - 30px
             </div>
-            <div style={{ fontSize: theme.typography.fontSize['2xl'], marginBottom: theme.spacing.sm }}>
+            <div
+              style={{ fontSize: theme.typography.fontSize['2xl'], marginBottom: theme.spacing.sm }}
+            >
               Heading 3 - 24px
             </div>
-            <div style={{ fontSize: theme.typography.fontSize.xl, marginBottom: theme.spacing.sm }}>Body Large - 20px</div>
-            <div style={{ fontSize: theme.typography.fontSize.base, marginBottom: theme.spacing.sm }}>Body - 16px</div>
-            <div style={{ fontSize: theme.typography.fontSize.sm, marginBottom: theme.spacing.sm }}>Body Small - 14px</div>
+            <div style={{ fontSize: theme.typography.fontSize.xl, marginBottom: theme.spacing.sm }}>
+              Body Large - 20px
+            </div>
+            <div
+              style={{ fontSize: theme.typography.fontSize.base, marginBottom: theme.spacing.sm }}
+            >
+              Body - 16px
+            </div>
+            <div style={{ fontSize: theme.typography.fontSize.sm, marginBottom: theme.spacing.sm }}>
+              Body Small - 14px
+            </div>
             <div style={{ fontSize: theme.typography.fontSize.xs }}>Caption - 12px</div>
           </ComponentDemo>
         </ComponentCard>
@@ -343,7 +357,11 @@ export function Showcase() {
             </h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.md }}>
               <Input label="Normal" placeholder="Estado normal" />
-              <Input label="Com Erro" error="Este campo é obrigatório" placeholder="Campo com erro" />
+              <Input
+                label="Com Erro"
+                error="Este campo é obrigatório"
+                placeholder="Campo com erro"
+              />
               <Input label="Desabilitado" disabled placeholder="Campo desabilitado" />
             </div>
           </div>
@@ -359,7 +377,11 @@ export function Showcase() {
             >
               Full Width
             </h4>
-            <Input fullWidth label="Campo Full Width" placeholder="Ocupa toda a largura disponível" />
+            <Input
+              fullWidth
+              label="Campo Full Width"
+              placeholder="Ocupa toda a largura disponível"
+            />
           </div>
         </ComponentCard>
 
@@ -407,28 +429,64 @@ export function Showcase() {
             >
               Variantes
             </h4>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: theme.spacing.md }}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: theme.spacing.md,
+              }}
+            >
               <Card variant="elevated">
-                <h5 style={{ marginBottom: theme.spacing.sm, fontWeight: theme.typography.fontWeight.semibold }}>
+                <h5
+                  style={{
+                    marginBottom: theme.spacing.sm,
+                    fontWeight: theme.typography.fontWeight.semibold,
+                  }}
+                >
                   Elevated
                 </h5>
-                <p style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.text.secondary }}>
+                <p
+                  style={{
+                    fontSize: theme.typography.fontSize.sm,
+                    color: theme.colors.text.secondary,
+                  }}
+                >
                   Card com sombra elevada
                 </p>
               </Card>
               <Card variant="outlined">
-                <h5 style={{ marginBottom: theme.spacing.sm, fontWeight: theme.typography.fontWeight.semibold }}>
+                <h5
+                  style={{
+                    marginBottom: theme.spacing.sm,
+                    fontWeight: theme.typography.fontWeight.semibold,
+                  }}
+                >
                   Outlined
                 </h5>
-                <p style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.text.secondary }}>
+                <p
+                  style={{
+                    fontSize: theme.typography.fontSize.sm,
+                    color: theme.colors.text.secondary,
+                  }}
+                >
                   Card com borda
                 </p>
               </Card>
               <Card variant="filled">
-                <h5 style={{ marginBottom: theme.spacing.sm, fontWeight: theme.typography.fontWeight.semibold }}>
+                <h5
+                  style={{
+                    marginBottom: theme.spacing.sm,
+                    fontWeight: theme.typography.fontWeight.semibold,
+                  }}
+                >
                   Filled
                 </h5>
-                <p style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.text.secondary }}>
+                <p
+                  style={{
+                    fontSize: theme.typography.fontSize.sm,
+                    color: theme.colors.text.secondary,
+                  }}
+                >
                   Card com background preenchido
                 </p>
               </Card>
@@ -475,20 +533,46 @@ export function Showcase() {
             >
               Clickable
             </h4>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: theme.spacing.md }}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: theme.spacing.md,
+              }}
+            >
               <Card clickable onClick={() => alert('Card clicado!')}>
-                <h5 style={{ marginBottom: theme.spacing.sm, fontWeight: theme.typography.fontWeight.semibold }}>
+                <h5
+                  style={{
+                    marginBottom: theme.spacing.sm,
+                    fontWeight: theme.typography.fontWeight.semibold,
+                  }}
+                >
                   🖱️ Clique aqui
                 </h5>
-                <p style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.text.secondary }}>
+                <p
+                  style={{
+                    fontSize: theme.typography.fontSize.sm,
+                    color: theme.colors.text.secondary,
+                  }}
+                >
                   Card interativo
                 </p>
               </Card>
               <Card clickable variant="outlined" onClick={() => alert('Outra opção!')}>
-                <h5 style={{ marginBottom: theme.spacing.sm, fontWeight: theme.typography.fontWeight.semibold }}>
+                <h5
+                  style={{
+                    marginBottom: theme.spacing.sm,
+                    fontWeight: theme.typography.fontWeight.semibold,
+                  }}
+                >
                   ✨ Ou aqui
                 </h5>
-                <p style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.text.secondary }}>
+                <p
+                  style={{
+                    fontSize: theme.typography.fontSize.sm,
+                    color: theme.colors.text.secondary,
+                  }}
+                >
                   Com hover e animação
                 </p>
               </Card>
@@ -507,7 +591,9 @@ export function Showcase() {
               Exemplo Complexo
             </h4>
             <Card variant="elevated">
-              <h3 style={{ marginBottom: theme.spacing.sm, fontSize: theme.typography.fontSize.xl }}>
+              <h3
+                style={{ marginBottom: theme.spacing.sm, fontSize: theme.typography.fontSize.xl }}
+              >
                 Sugestão de Reparo
               </h3>
               <p style={{ marginBottom: theme.spacing.md, color: theme.colors.text.secondary }}>
@@ -563,13 +649,17 @@ export function Showcase() {
             <ComponentDemo>
               <div style={{ textAlign: 'center' }}>
                 <Avatar variant="user" />
-                <div style={{ fontSize: theme.typography.fontSize.xs, marginTop: theme.spacing.xs }}>
+                <div
+                  style={{ fontSize: theme.typography.fontSize.xs, marginTop: theme.spacing.xs }}
+                >
                   Usuário
                 </div>
               </div>
               <div style={{ textAlign: 'center' }}>
                 <Avatar variant="assistant" />
-                <div style={{ fontSize: theme.typography.fontSize.xs, marginTop: theme.spacing.xs }}>
+                <div
+                  style={{ fontSize: theme.typography.fontSize.xs, marginTop: theme.spacing.xs }}
+                >
                   Assistente
                 </div>
               </div>
@@ -606,21 +696,9 @@ export function Showcase() {
               Com Imagem
             </h4>
             <ComponentDemo>
-              <Avatar
-                src="https://i.pravatar.cc/150?img=1"
-                alt="User 1"
-                size="small"
-              />
-              <Avatar
-                src="https://i.pravatar.cc/150?img=2"
-                alt="User 2"
-                size="medium"
-              />
-              <Avatar
-                src="https://i.pravatar.cc/150?img=3"
-                alt="User 3"
-                size="large"
-              />
+              <Avatar src="https://i.pravatar.cc/150?img=1" alt="User 1" size="small" />
+              <Avatar src="https://i.pravatar.cc/150?img=2" alt="User 2" size="medium" />
+              <Avatar src="https://i.pravatar.cc/150?img=3" alt="User 3" size="large" />
             </ComponentDemo>
           </div>
 

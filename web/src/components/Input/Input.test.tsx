@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
 import { ThemeProvider } from '@emotion/react';
+import { render, screen } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
 import { lightTheme } from '../../styles/theme';
 import { Input, Textarea } from './Input';
 

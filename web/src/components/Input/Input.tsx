@@ -1,5 +1,5 @@
+import { HelperText, InputWrapper, Label, StyledInput, StyledTextarea } from './Input.styles';
 import type { InputProps, TextareaProps } from './types';
-import { InputWrapper, Label, StyledInput, StyledTextarea, HelperText } from './Input.styles';
 
 export const Input = ({ label, error, helperText, fullWidth = false, id, ...rest }: InputProps) => {
   const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
@@ -9,9 +9,7 @@ export const Input = ({ label, error, helperText, fullWidth = false, id, ...rest
     <InputWrapper fullWidth={fullWidth}>
       {label && <Label htmlFor={inputId}>{label}</Label>}
       <StyledInput id={inputId} hasError={hasError} aria-invalid={hasError} {...rest} />
-      {(error || helperText) && (
-        <HelperText isError={hasError}>{error || helperText}</HelperText>
-      )}
+      {(error || helperText) && <HelperText isError={hasError}>{error || helperText}</HelperText>}
     </InputWrapper>
   );
 };
@@ -38,9 +36,7 @@ export const Textarea = ({
         rows={rows}
         {...rest}
       />
-      {(error || helperText) && (
-        <HelperText isError={hasError}>{error || helperText}</HelperText>
-      )}
+      {(error || helperText) && <HelperText isError={hasError}>{error || helperText}</HelperText>}
     </InputWrapper>
   );
 };

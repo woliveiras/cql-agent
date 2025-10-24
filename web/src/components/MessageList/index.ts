@@ -1,2 +1,2 @@
 export { MessageList } from './MessageList';
-export type { MessageListProps, Message } from './types';
+export type { Message, MessageListProps } from './types';

@@ -1,5 +1,5 @@
+import { AvatarIcon, AvatarImage, StyledAvatar } from './Avatar.styles';
 import type { AvatarProps } from './types';
-import { StyledAvatar, AvatarImage, AvatarIcon } from './Avatar.styles';
 
 const getInitials = (name: string): string => {
   const parts = name.trim().split(' ');

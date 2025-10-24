@@ -23,9 +23,7 @@ export const useChatStore = create<ChatStore>()(
 
       updateMessage: (id, updates) =>
         set((state) => ({
-          messages: state.messages.map((msg) =>
-            msg.id === id ? { ...msg, ...updates } : msg
-          ),
+          messages: state.messages.map((msg) => (msg.id === id ? { ...msg, ...updates } : msg)),
         })),
 
       setSessionId: (sessionId) => {

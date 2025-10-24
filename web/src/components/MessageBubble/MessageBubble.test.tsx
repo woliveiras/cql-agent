@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
 import { ThemeProvider } from '@emotion/react';
+import { render, screen } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
 import { lightTheme } from '../../styles/theme';
 import { MessageBubble } from './MessageBubble';
 
@@ -10,28 +10,18 @@ const renderWithTheme = (component: React.ReactElement) => {
 
 describe('MessageBubble', () => {
   it('renders user message correctly', () => {
-    renderWithTheme(
-      <MessageBubble role="user" content="Minha torneira está vazando" />
-    );
+    renderWithTheme(<MessageBubble role="user" content="Minha torneira está vazando" />);
     expect(screen.getByText('Minha torneira está vazando')).toBeDefined();
   });
 
   it('renders assistant message correctly', () => {
-    renderWithTheme(
-      <MessageBubble role="assistant" content="Vou ajudar você com isso!" />
-    );
+    renderWithTheme(<MessageBubble role="assistant" content="Vou ajudar você com isso!" />);
     expect(screen.getByText('Vou ajudar você com isso!')).toBeDefined();
   });
 
   it('displays timestamp when provided', () => {
     const timestamp = new Date('2025-10-24T10:30:00');
-    renderWithTheme(
-      <MessageBubble
-        role="user"
-        content="Test message"
-        timestamp={timestamp}
-      />
-    );
+    renderWithTheme(<MessageBubble role="user" content="Test message" timestamp={timestamp} />);
     expect(screen.getByText('10:30')).toBeDefined();
   });
 
@@ -50,17 +40,13 @@ describe('MessageBubble', () => {
   });
 
   it('renders user avatar for user messages', () => {
-    const { container } = renderWithTheme(
-      <MessageBubble role="user" content="Test" />
-    );
+    const { container } = renderWithTheme(<MessageBubble role="user" content="Test" />);
     // Avatar component renders with specific structure
     expect(container.querySelector('[class*="Avatar"]')).toBeTruthy();
   });
 
   it('renders assistant avatar for assistant messages', () => {
-    const { container } = renderWithTheme(
-      <MessageBubble role="assistant" content="Test" />
-    );
+    const { container } = renderWithTheme(<MessageBubble role="assistant" content="Test" />);
     expect(container.querySelector('[class*="Avatar"]')).toBeTruthy();
   });
 });
