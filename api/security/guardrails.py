@@ -72,6 +72,51 @@ class ContentGuardrail:
         "reparo", "manutenção", "diy", "faça você mesmo"
     ]
 
+    # Sistema de pesos para keywords (importância/urgência)
+    KEYWORD_WEIGHTS = {
+        # URGENTES (peso 3.0) - Situações de emergência ou alto risco
+        "urgente": 3.0,
+        "emergência": 3.0,
+        "vazamento": 3.0,
+        "fogo": 3.0,
+        "gás": 3.0,
+        "curto": 3.0,           # Curto-circuito
+        "choque": 3.0,
+        "incêndio": 3.0,
+        "perigo": 3.0,
+        "segurança": 3.0,
+        
+        # CRÍTICOS (peso 2.0) - Problemas graves que precisam atenção rápida
+        "quebrado": 2.0,
+        "entupido": 2.0,
+        "infiltração": 2.0,
+        "goteira": 2.0,
+        "rachadura": 2.0,
+        "fissura": 2.0,
+        "defeito": 2.0,
+        "danificado": 2.0,
+        "travando": 2.0,
+        "pingando": 2.0,
+        "molhado": 2.0,
+        "umidade": 2.0,
+        
+        # IMPORTANTES (peso 1.5) - Ações e problemas comuns
+        "consertar": 1.5,
+        "reparar": 1.5,
+        "arrumar": 1.5,
+        "trocar": 1.5,
+        "substituir": 1.5,
+        "instalar": 1.5,
+        "problema": 1.5,
+        "corrigir": 1.5,
+        "ajustar": 1.5,
+        "fixar": 1.5,
+        "manutenção": 1.5,
+        
+        # CONTEXTUAIS (peso 1.0) - Termos descritivos/localização (padrão)
+        # Todos os outros termos não listados acima têm peso 1.0
+    }
+
     # Padrões de perguntas legítimas (serão compilados no __init__)
     QUESTION_PATTERNS_RAW = [
         r"\bcomo\s+(consertar|reparar|arrumar|resolver|instalar|trocar|fixar)",
@@ -464,6 +509,45 @@ class ContentGuardrail:
 
         return True, None
 
+    def _calculate_weighted_keyword_score(self, keywords: List[str]) -> float:
+        """
+        Calcula score ponderado baseado na importância das keywords
+        
+        Keywords urgentes (peso 3.0) contribuem mais que contextuais (peso 1.0).
+        Score é normalizado para 0.0-1.0.
+        
+        Args:
+            keywords: Lista de keywords encontradas
+            
+        Returns:
+            Score normalizado de 0.0 a 1.0
+        """
+        if not keywords:
+            return 0.0
+        
+        # Calcula soma ponderada
+        total_weight = 0.0
+        max_possible_weight = 0.0
+        
+        for keyword in keywords:
+            # Pega peso da keyword (padrão 1.0 se não especificado)
+            weight = self.KEYWORD_WEIGHTS.get(keyword, 1.0)
+            total_weight += weight
+            
+            # Para normalização, assume peso máximo possível (3.0 urgente)
+            max_possible_weight += 3.0
+        
+        # Normaliza para 0-1 (considera que 3 keywords urgentes = 1.0)
+        # Ajusta para que 3 keywords de peso médio (1.5) ≈ 0.75
+        normalized_score = min(total_weight / 9.0, 1.0)  # 9.0 = 3 keywords × peso 3.0
+        
+        logger.debug(
+            f"Weighted keyword score: {normalized_score:.2f} "
+            f"(total_weight: {total_weight:.1f}, keywords: {len(keywords)})"
+        )
+        
+        return normalized_score
+
     def _check_repair_relevance(self, message: str) -> float:
         """
         Calcula score de relevância para reparos residenciais
@@ -497,8 +581,7 @@ class ContentGuardrail:
         
         # Estratégia 2: Fuzzy matching (detecta typos) - SEMPRE executa
         matched_keywords, corrections = self._fuzzy_match_keywords(message)
-        keyword_count = len(matched_keywords)
-
+        
         # Log das correções aplicadas
         if corrections:
             logger.info(f"Fuzzy corrections applied: {corrections}")
@@ -506,8 +589,8 @@ class ContentGuardrail:
         # Estratégia 3: Verifica padrões de pergunta
         pattern_matches = sum(1 for pattern in self.question_patterns if pattern.search(message))
 
-        # Estratégia 4: Calcula scores parciais
-        keyword_score = min(keyword_count / 3, 1.0)  # Normaliza em 3 keywords
+        # Estratégia 4: Calcula score ponderado de keywords
+        keyword_score = self._calculate_weighted_keyword_score(matched_keywords)
         pattern_score = min(pattern_matches / 2, 1.0)  # Normaliza em 2 padrões
 
         # Estratégia 5: Combina scores de forma inteligente
@@ -526,7 +609,7 @@ class ContentGuardrail:
 
         logger.debug(
             f"Relevance score: {final_score:.2f} "
-            f"(keywords: {keyword_count}, patterns: {pattern_matches}, "
+            f"(weighted_keywords: {keyword_score:.2f}, patterns: {pattern_matches}, "
             f"corrections: {len(corrections)}, ner_score: {ner_score:.2f})"
         )
 
