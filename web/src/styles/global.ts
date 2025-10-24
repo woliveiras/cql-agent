@@ -14,6 +14,10 @@ export const globalStyles = (theme: Theme) => css`
     -moz-osx-font-smoothing: grayscale;
   }
 
+  #root {
+    width: 100%
+  }
+
   body {
     font-family: ${theme.typography.fontFamily.sans};
     font-size: ${theme.typography.fontSize.base};
