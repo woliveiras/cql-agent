@@ -2,7 +2,7 @@
 
 Agente de IA especializado em ajudar com pequenos reparos residenciais, construído com LangChain, Ollama e Python.
 
-[![tests](https://github.com/woliveiras/cql-agent/actions/workflows/on_push_to_main.yml/badge.svg)](https://github.com/woliveiras/cql-agent/actions/workflows/on_push_to_main.yml)
+[![on_push_to_main](https://github.com/woliveiras/cql-agent/actions/workflows/on_push_to_main.yml/badge.svg)](https://github.com/woliveiras/cql-agent/actions/workflows/on_push_to_main.yml)
 
 ## ✨ Funcionalidades
 
