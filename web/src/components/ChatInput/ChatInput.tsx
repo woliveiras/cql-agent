@@ -22,8 +22,8 @@ export function ChatInput({
   useEffect(() => {
     const textarea = textareaRef.current;
     if (textarea) {
-      textarea.style.height = 'auto';
-      textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`;
+      textarea.style.height = '120px';
+      textarea.style.height = `${Math.min(textarea.scrollHeight, 240)}px`;
     }
   }, [value]);
 

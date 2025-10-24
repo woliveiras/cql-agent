@@ -8,6 +8,9 @@ export const Container = styled.div<{ theme?: Theme }>`
   background-color: ${(props) => props.theme?.colors.background.default || '#FFFFFF'};
   border-top: 1px solid ${(props) => props.theme?.colors.neutral[200] || '#E2E8F0'};
   align-items: flex-end;
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
 
   @media (max-width: ${(props) => props.theme?.breakpoints.mobile || '640px'}) {
     padding: ${(props) => props.theme?.spacing.md || '1rem'};
@@ -22,8 +25,8 @@ export const InputWrapper = styled.div`
 
 export const StyledTextarea = styled.textarea<{ theme?: Theme }>`
   width: 100%;
-  min-height: 44px;
-  max-height: 120px;
+  min-height: 120px;
+  max-height: 240px;
   padding: ${(props) => props.theme?.spacing.md || '1rem'};
   border: 1px solid ${(props) => props.theme?.colors.neutral[300] || '#CBD5E1'};
   border-radius: ${(props) => props.theme?.borderRadius.lg || '0.75rem'};
@@ -32,7 +35,16 @@ export const StyledTextarea = styled.textarea<{ theme?: Theme }>`
   line-height: ${(props) => props.theme?.typography.lineHeight.normal || 1.5};
   resize: none;
   outline: none;
+  overflow-y: auto;
   transition: border-color ${(props) => props.theme?.transitions.fast || '0.15s'};
+
+  /* Remove scrollbar */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  
+  &::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
 
   &:focus {
     border-color: ${(props) => props.theme?.colors.primary.main || '#DC2626'};

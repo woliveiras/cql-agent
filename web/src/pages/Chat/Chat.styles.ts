@@ -6,6 +6,7 @@ export const ChatContainer = styled.div`
   flex-direction: column;
   height: 100%;
   width: 100%;
+  align-items: center;
 `;
 
 export const ChatContent = styled.div`
@@ -13,6 +14,8 @@ export const ChatContent = styled.div`
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  width: 100%;
+  max-width: 1200px;
 `;
 
 export const ErrorBanner = styled.div<{ theme?: Theme }>`
