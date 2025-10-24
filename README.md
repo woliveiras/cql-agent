@@ -37,13 +37,38 @@ Agente de IA especializado em ajudar com pequenos reparos residenciais, constru�
 - 🎯 Guardrails de conteúdo (apenas reparos residenciais)
 - ⚡ Performance otimizada (async/await)
 
+## 🏗️ Arquitetura
+
+O projeto é dividido em três componentes principais:
+
+1. **Backend (Python + FastAPI)**: API REST com agente de IA, RAG e ferramentas
+2. **Frontend (React + TypeScript)**: Interface web moderna para interação
+3. **Ollama (Docker)**: Servidor LLM local para processamento
+
+```text
+┌─────────────┐      ┌─────────────┐      ┌─────────────┐
+│   Frontend  │─────▶│   Backend   │─────▶│   Ollama    │
+│  React/Vite │ HTTP │ FastAPI/LLM │ HTTP │  LLM Local  │
+└─────────────┘      └─────────────┘      └─────────────┘
+                            │
+                            ├──▶ ChromaDB (RAG)
+                            └──▶ DuckDuckGo (Web Search)
+```
+
 ## 🚀 Como usar
 
 ### 1. Pré-requisitos
 
+**Backend:**
+
 - Python 3.10+
 - Docker e Docker Compose
 - UV (gerenciador de pacotes Python)
+
+**Frontend (Opcional):**
+
+- Node.js 18+ ou 20+
+- pnpm 10+
 
 ### 2. Iniciar o Ollama
 
@@ -110,7 +135,25 @@ uv run python test_api.py
 
 > 📚 **Guia completo:** Veja [GUIA_DEPLOY.md](docs/GUIA_DEPLOY.md) para mais opções de execução
 
-#### Opção 3: Docker Compose (Deploy Completo)
+#### Opção 3: Frontend Web (React)
+
+```bash
+# Navegar para a pasta do frontend
+cd web
+
+# Instalar dependências (primeira vez)
+pnpm install
+
+# Iniciar servidor de desenvolvimento
+pnpm dev
+
+# Acessar interface web
+# http://localhost:5173
+```
+
+> 💡 **Nota:** O frontend requer que a API REST esteja rodando na porta 5000
+
+#### Opção 4: Docker Compose (Deploy Completo)
 
 ```bash
 # Iniciar todos os serviços (Ollama + API + OpenWebUI)
@@ -169,6 +212,8 @@ O problema foi resolvido? Responda com 'sim' ou 'não'.
 
 ## 🛠️ Tecnologias Utilizadas
 
+**Backend:**
+
 - **Python** - Linguagem de programação
 - **UV** - Gerenciador de pacotes e ambientes virtuais
 - **LangChain** - Framework para construção de aplicações com LLMs
@@ -180,6 +225,18 @@ O problema foi resolvido? Responda com 'sim' ou 'não'.
 - **Uvicorn** - Servidor ASGI de alta performance
 - **ChromaDB** - Banco de dados vetorial para RAG
 - **DuckDuckGo** - Busca web gratuita e privada
+
+**Frontend:**
+
+- **React** - Biblioteca para interfaces de usuário
+- **TypeScript** - JavaScript tipado
+- **Vite** - Build tool moderna
+- **EmotionCSS** - Styling CSS-in-JS
+- **Zustand** - State management
+- **React Query** - Data fetching e cache
+- **React Router** - Roteamento
+- **Vitest** - Framework de testes
+- **Biome.js** - Linting e formatação
 
 ## 💡 Boas Práticas do Código
 
@@ -229,7 +286,22 @@ cql-agent/
 │       ├── test_security.py   # Testes unitários
 │       ├── test_api_security.py  # Testes de integração
 │       └── README.md          # Documentação de segurança
-├── openwebui/                 # 🎨 Integração OpenWebUI
+├── web/                       # 🎨 Frontend React
+│   ├── src/
+│   │   ├── components/        # Componentes reutilizáveis
+│   │   ├── containers/        # Componentes agregadores
+│   │   ├── pages/             # Páginas da aplicação
+│   │   ├── hooks/             # Custom React hooks
+│   │   ├── services/          # API clients
+│   │   ├── store/             # Zustand stores
+│   │   ├── styles/            # Theme e estilos globais
+│   │   └── test/              # Setup de testes
+│   ├── public/                # Arquivos estáticos
+│   ├── package.json
+│   ├── vite.config.ts
+│   ├── biome.json             # Configuração Biome.js
+│   └── README.md              # Documentação do frontend
+├── openwebui/                 # 🔌 Integração OpenWebUI
 │   └── pipe.py                # Pipe Function
 ├── scripts/                   # 📜 Scripts auxiliares
 │   └── setup_rag.py           # Processa PDFs e cria base
