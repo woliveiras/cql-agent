@@ -36,6 +36,48 @@ jobs:
         working-directory: ./web
         run: pnpm audit --audit-level=moderate
 
+  scan_python_dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+      
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+      
+      - name: Install dependencies
+        run: uv sync
+      
+      - name: Run pip-audit (security vulnerabilities)
+        run: uv run pip-audit --desc
+        continue-on-error: true
+      
+      - name: Run safety check
+        run: |
+          uv pip install safety
+          uv run safety check --json
+        continue-on-error: true
+
+  scan_docker_security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          scan-type: 'config'
+          scan-ref: '.'
+          format: 'table'
+          exit-code: '0'
+          severity: 'CRITICAL,HIGH'
+
   quality_checks:
     runs-on: ubuntu-latest
     steps:

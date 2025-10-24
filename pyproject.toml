@@ -30,6 +30,8 @@ dependencies = [
     "flake8>=7.0.0",
     "pylint>=3.0.0",
     "rapidfuzz>=3.14.1",
+    "pip-audit>=2.6.0",
+    "safety>=3.0.0",
 ]
 
 [tool.pytest.ini_options]
