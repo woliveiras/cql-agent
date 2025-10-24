@@ -62,11 +62,8 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: '20.x'
-          cache: 'pnpm'
-          cache-dependency-path: 'web/pnpm-lock.yaml'
 
       - name: Install pnpm
-        working-directory: ./web
         run: corepack enable && corepack prepare pnpm@latest --activate
 
       - name: Cache pnpm modules
@@ -76,6 +73,10 @@ jobs:
           key: ${{ runner.os }}-pnpm-${{ hashFiles('web/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-pnpm-
+
+      - name: Install frontend dependencies
+        working-directory: ./web
+        run: pnpm install
 
       - name: biome lint
         working-directory: ./web
