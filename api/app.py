@@ -42,7 +42,11 @@ app = FastAPI(
 # Configuração CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:5001",
+        "http://127.0.0.1:5001",
+        "*"  # Permite qualquer origem em desenvolvimento
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -65,7 +69,7 @@ class ChatRequest(BaseModel):
         default="default",
         min_length=1,
         max_length=128,
-        pattern=r'^[a-zA-Z0-9_-]+$',
+        pattern=r'^[a-zA-Z0-9_\-]+$',
         description="ID da sessão (alfanumérico, _ e - permitidos)"
     )
     use_rag: Optional[bool] = Field(

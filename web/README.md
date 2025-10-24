@@ -21,23 +21,30 @@ Interface web moderna para o assistente de IA de reparos residenciais.
 
 - Node.js 18+ ou 20+
 - pnpm 10+
+- Backend da API rodando (porta 5000)
 
 ### Instalação
 
 ```bash
 # Instalar dependências
 pnpm install
+
+# Configurar variáveis de ambiente
+cp .env.example .env
+# Editar .env com a URL da API (padrão: http://localhost:5000)
 ```
 
 ### Desenvolvimento
 
 ```bash
-# Iniciar servidor de desenvolvimento (porta 5173)
+# Iniciar servidor de desenvolvimento (porta 5001)
 pnpm dev
 
 # A aplicação estará disponível em:
-# http://localhost:5173
+# http://localhost:5001
 ```
+
+**⚠️ Importante:** Certifique-se de que o backend está rodando antes de iniciar o frontend!
 
 ### Build para Produção
 
@@ -87,10 +94,51 @@ web/
 │   ├── services/       # API clients e serviços
 │   ├── store/          # Zustand stores
 │   ├── styles/         # Theme e estilos globais
+│   ├── config/         # Configurações (env, etc)
+│   ├── lib/            # Utilitários e bibliotecas
 │   └── test/           # Setup de testes
 ├── public/             # Arquivos estáticos
+├── .env.example        # Exemplo de variáveis de ambiente
 └── package.json
 ```
+
+## 🔌 Integração com Backend
+
+O frontend se conecta com a API REST através de:
+
+### Configuração
+
+Configure a URL da API no arquivo `.env`:
+
+```bash
+VITE_API_URL=http://localhost:5000
+```
+
+### Portas
+
+- **Frontend:** http://localhost:5001
+- **Backend:** http://localhost:5000
+
+### Endpoints Utilizados
+
+- `POST /chat/message` - Enviar mensagem ao assistente
+- `GET /health` - Health check da API
+
+### Services
+
+- **chatService**: Gerencia comunicação com a API de chat
+- **api**: Cliente Axios configurado com interceptors
+- **React Query**: Cache e gerenciamento de estado assíncrono
+- **Zustand**: Estado global (mensagens, conversationId, loading, erro)
+
+### Fluxo de Dados
+
+1. Usuário digita mensagem
+2. Store Zustand adiciona mensagem do usuário
+3. React Query envia requisição para API
+4. API retorna resposta do Vicente
+5. Store adiciona resposta às mensagens
+6. UI atualiza automaticamente
 
 ## 🎨 Design System
 

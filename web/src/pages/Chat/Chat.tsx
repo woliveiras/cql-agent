@@ -1,6 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { MessageList, type Message } from '../../components/MessageList';
 import { ChatInput } from '../../components/ChatInput';
+import { useChatStore } from '../../store/chat';
+import { useSendMessage } from '../../hooks/useSendMessage';
+import type { ApiError } from '../../services';
 import {
   ChatContainer,
   ChatContent,
@@ -9,52 +13,78 @@ import {
 } from './Chat.styles';
 
 export function Chat() {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const location = useLocation();
+  const initialMessage = location.state?.initialMessage as string | undefined;
+  const hasInitialized = useRef(false);
+  
   const [inputValue, setInputValue] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  
+  const {
+    messages,
+    sessionId,
+    isLoading,
+    error,
+    addMessage,
+    setLoading,
+    setError,
+    clearError,
+  } = useChatStore();
 
-  const handleSend = async () => {
-    if (!inputValue.trim()) return;
+  const sendMessageMutation = useSendMessage();
+
+  // Enviar mensagem inicial se vier da página Welcome
+  useEffect(() => {
+    if (initialMessage && messages.length === 0 && !hasInitialized.current) {
+      hasInitialized.current = true;
+      handleSend(initialMessage);
+    }
+  }, [initialMessage, messages.length]);
+
+  const handleSend = async (messageText?: string) => {
+    const textToSend = messageText || inputValue.trim();
+    if (!textToSend) return;
 
     const userMessage: Message = {
       id: crypto.randomUUID(),
       role: 'user',
-      content: inputValue,
+      content: textToSend,
       timestamp: new Date(),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    addMessage(userMessage);
     setInputValue('');
-    setIsLoading(true);
-    setError(null);
+    setLoading(true);
+    clearError();
 
     try {
-      // TODO: Integrar com a API real
-      // Simulação de resposta
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const response = await sendMessageMutation.mutateAsync({
+        message: textToSend,
+        session_id: sessionId, // Sempre envia o sessionId
+        use_rag: true,
+        use_web_search: true,
+      });
 
       const assistantMessage: Message = {
         id: crypto.randomUUID(),
         role: 'assistant',
-        content:
-          'Olá! Sou o Vicente, seu assistente de reparos. Esta é uma resposta simulada. Em breve vou me conectar com a API real para ajudar você com seus problemas domésticos! 🔧',
+        content: response.response,
         timestamp: new Date(),
       };
 
-      setMessages((prev) => [...prev, assistantMessage]);
+      addMessage(assistantMessage);
     } catch (err) {
+      const apiError = err as ApiError;
       setError(
-        'Não foi possível enviar sua mensagem. Por favor, tente novamente.'
+        apiError.detail || 'Não foi possível enviar sua mensagem. Por favor, tente novamente.'
       );
       console.error('Error sending message:', err);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   const handleCloseError = () => {
-    setError(null);
+    clearError();
   };
 
   return (

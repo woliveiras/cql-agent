@@ -114,14 +114,12 @@ export function Welcome() {
 
   const handleStart = () => {
     if (message.trim()) {
-      // TODO: Navegar para página de chat com a mensagem
-      console.log('Iniciando chat com:', message);
-      navigate('/chat');
+      navigate('/chat', { state: { initialMessage: message } });
     }
   };
 
   const handleSuggestionClick = (suggestionText: string) => {
-    setMessage(suggestionText);
+    navigate('/chat', { state: { initialMessage: suggestionText } });
   };
 
   return (

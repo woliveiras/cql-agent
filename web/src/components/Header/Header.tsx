@@ -1,10 +1,13 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '../Button';
+import { useChatStore } from '../../store/chat';
 import type { HeaderProps } from './types';
 import { HeaderContainer, HeaderContent, Logo, LogoIcon, Nav } from './Header.styles';
 
 export const Header = ({ onNewChat }: HeaderProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const startNewConversation = useChatStore((state) => state.startNewConversation);
 
   const handleLogoClick = () => {
     navigate('/');
@@ -14,7 +17,15 @@ export const Header = ({ onNewChat }: HeaderProps) => {
     if (onNewChat) {
       onNewChat();
     } else {
-      navigate('/');
+      // Inicia nova conversa e redireciona para home
+      startNewConversation();
+      
+      // Se já estiver na home, apenas recarrega
+      if (location.pathname === '/') {
+        window.location.reload();
+      } else {
+        navigate('/');
+      }
     }
   };
 
