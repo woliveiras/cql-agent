@@ -150,9 +150,9 @@ class ContentGuardrail:
         r"<start_of_turn>|<end_of_turn>",  # Delimitadores de turno
 
         # Tentativas de role manipulation
-        r"(act|behave|pretend|play|roleplay)\s+(as|like)\s+(a|an)",
+        r"(act|behave|pretend|play|roleplay)\s+(as|like|that\s+you)",
         r"from\s+now\s+on",
-        r"switch\s+to\s+(mode|role|character)",
+        r"switch\s+to\s+(mode|role|character|developer)",
         r"override\s+(your|the)\s+(instructions?|rules?|programming)",
 
         # Tentativas de extrair informações do sistema
@@ -186,7 +186,8 @@ class ContentGuardrail:
     def __init__(
         self,
         strict_mode: bool = False,
-        use_ner: bool = True
+        use_ner: bool = True,
+        use_context_analysis: bool = True
     ):
         """
         Inicializa o guardrail
@@ -194,9 +195,11 @@ class ContentGuardrail:
         Args:
             strict_mode: Se True, aplica validação mais rigorosa
             use_ner: Se True, usa NER para análise de entidades (recomendado)
+            use_context_analysis: Se True, usa análise de contexto sintático (recomendado)
         """
         self.strict_mode = strict_mode
         self.use_ner = use_ner
+        self.use_context_analysis = use_context_analysis
 
         # Pré-compila todos os patterns regex para melhor performance
         self.question_patterns: List[Pattern] = [
@@ -212,9 +215,12 @@ class ContentGuardrail:
         # NER lazy loading (carrega apenas quando necessário)
         self._ner = None
 
+        # Context analyzer lazy loading
+        self._context_analyzer = None
+
         logger.info(
             f"ContentGuardrail initialized: strict_mode={strict_mode}, "
-            f"use_ner={use_ner}, "
+            f"use_ner={use_ner}, use_context_analysis={use_context_analysis}, "
             f"question_patterns={len(self.question_patterns)}, "
             f"prohibited_patterns={len(self.prohibited_patterns)}"
         )
@@ -227,6 +233,15 @@ class ContentGuardrail:
             self._ner = get_repair_ner()
             logger.info("RepairNER loaded (lazy initialization)")
         return self._ner
+
+    @property
+    def context_analyzer(self):
+        """Lazy loading do Context Analyzer (carrega apenas quando usado)"""
+        if self.use_context_analysis and self._context_analyzer is None:
+            from api.security.context_analyzer import get_context_analyzer
+            self._context_analyzer = get_context_analyzer()
+            logger.info("ContextAnalyzer loaded (lazy initialization)")
+        return self._context_analyzer
 
     def _fuzzy_match_keywords(
         self,
@@ -579,38 +594,73 @@ class ContentGuardrail:
                 )
                 logger.debug(f"NER entities detail: {ner_summary['entities']}")
         
-        # Estratégia 2: Fuzzy matching (detecta typos) - SEMPRE executa
+        # Estratégia 2: Análise de contexto sintático (frases vs palavras isoladas)
+        context_score = 0.0
+        context_confidence = "low"
+
+        if self.use_context_analysis and self.context_analyzer:
+            context_analysis = self.context_analyzer.analyze(message)
+            context_score = context_analysis.context_score
+            context_confidence = context_analysis.confidence_level
+
+            logger.debug(
+                f"Context analysis: score={context_score:.2f}, "
+                f"confidence={context_confidence}, "
+                f"complete_sentence={context_analysis.has_complete_sentence}, "
+                f"tokens={context_analysis.num_tokens}"
+            )
+
+        # Estratégia 3: Fuzzy matching (detecta typos) - SEMPRE executa
         matched_keywords, corrections = self._fuzzy_match_keywords(message)
-        
+
         # Log das correções aplicadas
         if corrections:
             logger.info(f"Fuzzy corrections applied: {corrections}")
 
-        # Estratégia 3: Verifica padrões de pergunta
+        # Estratégia 4: Verifica padrões de pergunta
         pattern_matches = sum(1 for pattern in self.question_patterns if pattern.search(message))
 
-        # Estratégia 4: Calcula score ponderado de keywords
+        # Estratégia 5: Calcula score ponderado de keywords
         keyword_score = self._calculate_weighted_keyword_score(matched_keywords)
         pattern_score = min(pattern_matches / 2, 1.0)  # Normaliza em 2 padrões
 
-        # Estratégia 5: Combina scores de forma inteligente
+        # Estratégia 6: Combina scores de forma inteligente
         if self.use_ner and self.ner:
             # Se NER encontrou bom contexto, usa como base
             if has_repair_context:
-                # Média ponderada: NER (70%), keywords (20%), patterns (10%)
-                final_score = (ner_score * 0.7) + (keyword_score * 0.2) + (pattern_score * 0.1)
+                # Média ponderada: NER (50%), context (25%), keywords (15%), patterns (10%)
+                final_score = (
+                    (ner_score * 0.5) +
+                    (context_score * 0.25) +
+                    (keyword_score * 0.15) +
+                    (pattern_score * 0.1)
+                )
             else:
-                # NER não encontrou contexto, dá mais peso ao fuzzy matching
-                # Média ponderada: keywords (50%), NER (30%), patterns (20%)
-                final_score = (keyword_score * 0.5) + (ner_score * 0.3) + (pattern_score * 0.2)
+                # NER não encontrou contexto, valoriza análise sintática
+                # Média ponderada: keywords (35%), context (30%), NER (20%), patterns (15%)
+                final_score = (
+                    (keyword_score * 0.35) +
+                    (context_score * 0.30) +
+                    (ner_score * 0.20) +
+                    (pattern_score * 0.15)
+                )
+        elif self.use_context_analysis and self.context_analyzer:
+            # Sem NER, mas com análise de contexto
+            # Média ponderada: keywords (40%), context (35%), patterns (25%)
+            final_score = (
+                (keyword_score * 0.40) +
+                (context_score * 0.35) +
+                (pattern_score * 0.25)
+            )
         else:
-            # Sem NER: média ponderada keywords (70%) + patterns (30%)
+            # Sem NER nem context: média ponderada keywords (70%) + patterns (30%)
             final_score = (keyword_score * 0.7) + (pattern_score * 0.3)
 
         logger.debug(
             f"Relevance score: {final_score:.2f} "
-            f"(weighted_keywords: {keyword_score:.2f}, patterns: {pattern_matches}, "
-            f"corrections: {len(corrections)}, ner_score: {ner_score:.2f})"
+            f"(weighted_keywords: {keyword_score:.2f}, context: {context_score:.2f}, "
+            f"patterns: {pattern_matches}, corrections: {len(corrections)}, "
+            f"ner_score: {ner_score:.2f})"
         )
 
         return final_score
