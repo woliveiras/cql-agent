@@ -29,24 +29,36 @@ describe('MessageBubble', () => {
     const { container } = renderWithTheme(
       <MessageBubble role="assistant" content="Digitando" isStreaming={true} />
     );
-    expect(container.querySelector('span[class*="StreamingCursor"]')).toBeTruthy();
+    const spans = container.querySelectorAll('span');
+    const hasStreamingCursor = Array.from(spans).some((span) => {
+      const style = window.getComputedStyle(span);
+      return style.display === 'inline-block' && style.width === '2px';
+    });
+    expect(hasStreamingCursor).toBeTruthy();
   });
 
   it('does not show streaming cursor when isStreaming is false', () => {
     const { container } = renderWithTheme(
       <MessageBubble role="assistant" content="Mensagem completa" isStreaming={false} />
     );
-    expect(container.querySelector('span[class*="StreamingCursor"]')).toBeFalsy();
+    const spans = container.querySelectorAll('span');
+    const hasStreamingCursor = Array.from(spans).some((span) => {
+      const style = window.getComputedStyle(span);
+      return style.display === 'inline-block' && style.width === '2px';
+    });
+    expect(hasStreamingCursor).toBeFalsy();
   });
 
   it('renders user avatar for user messages', () => {
     const { container } = renderWithTheme(<MessageBubble role="user" content="Test" />);
-    // Avatar component renders with specific structure
-    expect(container.querySelector('[class*="Avatar"]')).toBeTruthy();
+    // Avatar é um SVG
+    const svg = container.querySelector('svg');
+    expect(svg).toBeTruthy();
   });
 
   it('renders assistant avatar for assistant messages', () => {
     const { container } = renderWithTheme(<MessageBubble role="assistant" content="Test" />);
-    expect(container.querySelector('[class*="Avatar"]')).toBeTruthy();
+    const svg = container.querySelector('svg');
+    expect(svg).toBeTruthy();
   });
 });

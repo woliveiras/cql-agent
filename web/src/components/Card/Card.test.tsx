@@ -59,6 +59,7 @@ describe('Card', () => {
   it('should be clickable when clickable prop is true', () => {
     const { container } = renderCard({ clickable: true });
     const card = container.firstChild as HTMLElement;
-    expect(card.style.cursor).toBe('pointer');
+    const computedStyle = window.getComputedStyle(card);
+    expect(computedStyle.cursor).toBe('pointer');
   });
 });
