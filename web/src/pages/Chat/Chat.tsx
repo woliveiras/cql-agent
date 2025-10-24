@@ -10,6 +10,9 @@ import {
   ChatContent,
   ErrorBanner,
   CloseButton,
+  NewConsultationContainer,
+  NewConsultationText,
+  NewConsultationButton,
 } from './Chat.styles';
 
 export function Chat() {
@@ -18,19 +21,20 @@ export function Chat() {
   const hasInitialized = useRef(false);
   
   const [inputValue, setInputValue] = useState('');
+  const [maxAttemptsReached, setMaxAttemptsReached] = useState(false);
   
   const {
     messages,
     sessionId,
     isLoading,
     error,
-    waitingFeedback,
     addMessage,
     setLoading,
     setError,
     clearError,
     setWaitingFeedback,
     updateMessage,
+    startNewConversation,
   } = useChatStore();
 
   const sendMessageMutation = useSendMessage();
@@ -81,6 +85,11 @@ export function Chat() {
       if (response.state === 'waiting_feedback') {
         setWaitingFeedback(true);
       }
+      
+      // Se atingiu o máximo de tentativas
+      if (response.state === 'max_attempts') {
+        setMaxAttemptsReached(true);
+      }
     } catch (err) {
       const apiError = err as ApiError;
       
@@ -119,6 +128,12 @@ export function Chat() {
     setWaitingFeedback(false);
   };
 
+  const handleNewConsultation = () => {
+    startNewConversation();
+    setMaxAttemptsReached(false);
+    hasInitialized.current = false;
+  };
+
   return (
     <ChatContainer>
       {error && (
@@ -154,14 +169,26 @@ export function Chat() {
           }
         />
 
-        <ChatInput
-          value={inputValue}
-          onChange={setInputValue}
-          onSend={handleSend}
-          disabled={isLoading}
-          placeholder="Descreva seu problema de reparo..."
-          maxLength={500}
-        />
+        {maxAttemptsReached ? (
+          <NewConsultationContainer>
+            <NewConsultationText>
+              Não conseguimos resolver seu problema nesta sessão. 
+              Que tal começar uma nova consulta?
+            </NewConsultationText>
+            <NewConsultationButton onClick={handleNewConsultation}>
+              🔧 Nova Consulta
+            </NewConsultationButton>
+          </NewConsultationContainer>
+        ) : (
+          <ChatInput
+            value={inputValue}
+            onChange={setInputValue}
+            onSend={handleSend}
+            disabled={isLoading}
+            placeholder="Descreva seu problema de reparo..."
+            maxLength={500}
+          />
+        )}
       </ChatContent>
     </ChatContainer>
   );
