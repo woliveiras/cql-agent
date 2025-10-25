@@ -58,8 +58,7 @@ def main():
 
         vectorstore_manager = VectorStoreManager(
             persist_directory=chroma_directory,
-            collection_name="repair_docs",
-            embedding_model="nomic-embed-text"
+            collection_name="repair_docs"
         )
 
         vectorstore_manager.create_vectorstore(documents)

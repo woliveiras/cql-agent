@@ -1,6 +1,6 @@
 # 🔧 Agente de IA para Reparos Residenciais
 
-Agente de IA especializado em ajudar com pequenos reparos residenciais, construído com LangChain, Ollama e Python.
+Agente de IA especializado em ajudar com pequenos reparos residenciais, construído com LangChain e Python. Suporta múltiplos provedores de LLM: Ollama (local), OpenAI, Google Gemini e Anthropic.
 
 [![on_push_to_main](https://github.com/woliveiras/cql-agent/actions/workflows/on_push_to_main.yml/badge.svg)](https://github.com/woliveiras/cql-agent/actions/workflows/on_push_to_main.yml)
 
@@ -10,7 +10,11 @@ Agente de IA especializado em ajudar com pequenos reparos residenciais, constru�
 - 🏠 Especializado em problemas residenciais
 - ⚠️ Alertas de segurança quando necessário
 - 💡 Instruções passo a passo
-- 🔒 100% local e privado (usando Ollama)
+- 🎯 **Múltiplos provedores de LLM suportados:**
+  - 🔒 **Ollama** - 100% local e privado (padrão)
+  - 🌐 **OpenAI** - GPT-4, GPT-3.5-turbo, etc
+  - ✨ **Google Gemini** - Gemini 1.5 Flash/Pro
+  - 🧠 **Anthropic** - Claude 3.5 Sonnet
 - 🔄 Sistema de tentativas (até 3 tentativas antes de sugerir profissional)
 - ✅ Validação de feedback com respostas "sim" ou "não"
 - 📝 Histórico de conversação mantido para contexto
@@ -19,10 +23,9 @@ Agente de IA especializado em ajudar com pequenos reparos residenciais, constru�
 - 🔍 Busca semântica em documentos
 - 💾 Armazenamento vetorial com ChromaDB
 - 🎯 Respostas baseadas em manuais específicos
-- ⚡ Embeddings locais com Ollama
+- ⚡ Embeddings com múltiplos provedores
 - 🌐 Busca web com DuckDuckGo
 - 🔄 Fallback automático: RAG → Web → LLM
-- 🆓 Completamente gratuito (sem API keys)
 - 🇧🇷 Resultados em português (região br-pt)
 - 🌐 API REST com FastAPI
 - 📖 Documentação Swagger e ReDoc automáticas
@@ -61,16 +64,47 @@ O projeto é dividido em três componentes principais:
 
 **Backend:**
 
-- Python 3.10+
-- Docker e Docker Compose
+- Python 3.12+
 - UV (gerenciador de pacotes Python)
+- Docker e Docker Compose
 
 **Frontend (Opcional):**
 
 - Node.js 18+ ou 20+
 - pnpm 10+
 
-### 2. Iniciar o Ollama
+### 2. Configurar Provedor de LLM
+
+Copie o arquivo de exemplo e configure seu provedor:
+
+```bash
+cp .env.example .env
+```
+
+Edite o arquivo `.env` e escolha seu provedor:
+
+#### Opção A: Ollama (Local - Gratuito) ⭐ Padrão
+
+```bash
+LLM_PROVIDER=ollama
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=qwen2.5:3b
+OLLAMA_EMBEDDING_MODEL=nomic-embed-text
+```
+
+Depois, inicie o Ollama:
+
+Se estiver usando o Ollama diretamente em seu S.O., lembre-se de executar o app.
+
+Em seguida, baixe os modelos através do terminal:
+
+```bash
+# Baixar os modelos (primeira vez)
+ollama pull qwen2.5:3b
+ollama pull nomic-embed-text
+```
+
+Se estiver usando via Docker, execute:
 
 ```bash
 # Subir o container do Ollama
@@ -81,7 +115,66 @@ docker exec -it ollama ollama pull qwen2.5:3b
 docker exec -it ollama ollama pull nomic-embed-text
 ```
 
-### 2.5. Configurar RAG (Opcional, mas recomendado)
+#### Opção B: OpenAI
+
+```bash
+LLM_PROVIDER=openai
+OPENAI_API_KEY=sk-...  # Sua chave da API OpenAI
+OPENAI_MODEL=gpt-4o-mini
+OPENAI_EMBEDDING_MODEL=text-embedding-3-small
+```
+
+Obtenha sua chave em: <https://platform.openai.com/api-keys>
+
+**Para instalar o suporte OpenAI:**
+
+```bash
+uv sync --extra openai
+```
+
+#### Opção C: Google Gemini
+
+```bash
+LLM_PROVIDER=gemini
+GEMINI_API_KEY=...  # Sua chave da API Gemini
+GEMINI_MODEL=gemini-1.5-flash
+GEMINI_EMBEDDING_MODEL=models/embedding-001
+```
+
+Obtenha sua chave em: <https://makersuite.google.com/app/apikey>
+
+**Para instalar o suporte Gemini:**
+
+```bash
+uv sync --extra google
+```
+
+#### Opção D: Anthropic (Claude)
+
+```bash
+LLM_PROVIDER=anthropic
+ANTHROPIC_API_KEY=sk-ant-...  # Sua chave da API Anthropic
+ANTHROPIC_MODEL=claude-3-5-sonnet-20241022
+
+# Para embeddings, use um dos outros provedores:
+EMBEDDING_PROVIDER=openai  # ou ollama
+```
+
+Obtenha sua chave em: <https://console.anthropic.com/settings/keys>
+
+**Para instalar o suporte Anthropic:**
+
+```bash
+uv sync --extra anthropic
+```
+
+#### Instalar Todos os Provedores
+
+```bash
+uv sync --extra all-providers
+```
+
+### 3. Configurar RAG
 
 ```bash
 # 1. Adicionar PDFs na pasta pdfs/
@@ -217,10 +310,13 @@ O problema foi resolvido? Responda com 'sim' ou 'não'.
 - **Python** - Linguagem de programação
 - **UV** - Gerenciador de pacotes e ambientes virtuais
 - **LangChain** - Framework para construção de aplicações com LLMs
-- **LangChain-Ollama** - Integração do LangChain com Ollama
+- **Múltiplos provedores LLM:**
+  - **LangChain-Ollama** - Modelos locais com Ollama
+  - **LangChain-OpenAI** - GPT-4, GPT-3.5-turbo (opcional)
+  - **LangChain-Google-GenAI** - Gemini 1.5 Flash/Pro (opcional)
+  - **LangChain-Anthropic** - Claude 3.5 Sonnet (opcional)
 - **Pydantic** - Validação de dados
-- **Ollama** - Execução local de modelos LLM
-- **Docker** - Containerização do Ollama
+- **Docker** - Containerização
 - **FastAPI** - Framework web moderno para API REST
 - **Uvicorn** - Servidor ASGI de alta performance
 - **ChromaDB** - Banco de dados vetorial para RAG
@@ -245,16 +341,92 @@ Este projeto segue boas práticas de desenvolvimento:
 - ✅ **Código limpo**: Comentários apenas onde agregam valor real
 - ✅ **Type hints**: Tipagem estática com Pydantic
 - ✅ **Documentação**: Docstrings significativas em funções principais
-- ✅ **Modularização**: Código organizado em módulos (prompts, rag, tools, api)
+- ✅ **Modularização**: Código organizado em módulos (prompts, rag, tools, api, llm)
+- ✅ **Factory Pattern**: Abstração de provedores LLM através de factories
 - ✅ **Validação**: Validação de entrada/saída com Pydantic
 - ✅ **Logging**: Sistema de logs estruturado
 - ✅ **Containerização**: Deploy completo com Docker Compose
+
+## 🔌 Provedores de LLM Suportados
+
+O projeto suporta múltiplos provedores através de uma camada de abstração:
+
+### Arquitetura de Provedores
+
+```text
+┌──────────────────────────────────────────────┐
+│           RepairAgent / VectorStore          │
+└──────────────────┬───────────────────────────┘
+                   │
+         ┌─────────▼──────────┐
+         │   LLMFactory /     │
+         │ EmbeddingsFactory  │
+         └─────────┬──────────┘
+                   │
+     ┌─────────────┼─────────────┬─────────────┐
+     ▼             ▼             ▼             ▼
+┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐
+│ Ollama  │  │ OpenAI  │  │ Gemini  │  │Anthropic│
+│ (Local) │  │   API   │  │   API   │  │   API   │
+└─────────┘  └─────────┘  └─────────┘  └─────────┘
+```
+
+### Comparação de Provedores
+
+| Provedor | Custo | Privacidade | Velocidade | Qualidade | Embeddings |
+|----------|-------|-------------|------------|-----------|------------|
+| **Ollama** | 🟢 Gratuito | 🟢 100% Local | 🟡 Média | 🟢 Boa | ✅ Sim |
+| **OpenAI** | 🔴 Pago | 🔴 Cloud | 🟢 Rápida | 🟢 Excelente | ✅ Sim |
+| **Gemini** | 🟡 Free Tier | 🔴 Cloud | 🟢 Rápida | 🟢 Excelente | ✅ Sim |
+| **Anthropic** | 🔴 Pago | 🔴 Cloud | 🟢 Rápida | 🟢 Excelente | ❌ Não* |
+
+*\* Anthropic não possui embeddings próprios. Use outro provedor para embeddings.*
+
+### Configuração via Variáveis de Ambiente
+
+Toda a configuração é feita através do arquivo `.env`:
+
+```bash
+# Escolher provedor principal
+LLM_PROVIDER=ollama  # ou openai, gemini, anthropic
+
+# Embeddings podem usar provedor diferente
+EMBEDDING_PROVIDER=ollama  # ou openai, gemini
+
+# Configurações específicas do provedor escolhido
+OLLAMA_MODEL=qwen2.5:3b
+OPENAI_MODEL=gpt-4o-mini
+GEMINI_MODEL=gemini-1.5-flash
+ANTHROPIC_MODEL=claude-3-5-sonnet-20241022
+```
+
+### Custos Estimados (APIs Pagas)
+
+**OpenAI (Novembro 2024):**
+
+- GPT-4o-mini: ~$0.15/$0.60 por 1M tokens (input/output)
+- text-embedding-3-small: ~$0.02 por 1M tokens
+
+**Google Gemini:**
+
+- Gemini 1.5 Flash: Gratuito até 15 req/min
+- Acima: ~$0.35/$1.05 por 1M tokens
+
+**Anthropic:**
+
+- Claude 3.5 Sonnet: ~$3/$15 por 1M tokens
+
+💡 **Dica:** Para uso pessoal/experimental, Ollama (gratuito) ou Gemini Free Tier são ótimas opções!
 
 ## 📁 Estrutura do Projeto
 
 ```text
 cql-agent/
 ├── agents/                    # 🤖 Agentes de IA
+│   ├── llm/                   # 🔌 Gerenciamento de provedores LLM
+│   │   ├── __init__.py        # Enums e configurações
+│   │   ├── factory.py         # Factory para criar LLMs
+│   │   └── embeddings_factory.py  # Factory para embeddings
 │   ├── repair_agent/          # Agente principal de reparos
 │   │   ├── __init__.py
 │   │   ├── agent.py           # Código principal do agente

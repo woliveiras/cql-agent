@@ -6,7 +6,8 @@ from pathlib import Path
 from typing import List, Optional
 from langchain_core.documents import Document
 from langchain_chroma import Chroma
-from langchain_ollama import OllamaEmbeddings
+
+from agents.llm import EmbeddingsFactory
 
 
 class VectorStoreManager:
@@ -16,8 +17,7 @@ class VectorStoreManager:
         self,
         persist_directory: str = "./chroma_db",
         collection_name: str = "repair_docs",
-        embedding_model: str = "nomic-embed-text",
-        ollama_base_url: str = "http://localhost:11434"
+        embedding_model: Optional[str] = None
     ):
         """
         Inicializa o gerenciador de vector store
@@ -25,16 +25,13 @@ class VectorStoreManager:
         Args:
             persist_directory: Diretório para persistir o banco
             collection_name: Nome da coleção no ChromaDB
-            embedding_model: Modelo de embeddings do Ollama
-            ollama_base_url: URL do servidor Ollama
+            embedding_model: Modelo de embeddings (usa padrão do provedor se None)
         """
         self.persist_directory = persist_directory
         self.collection_name = collection_name
 
-        # Inicializar embeddings
-        self.embeddings = OllamaEmbeddings(
-            model=embedding_model,
-            base_url=ollama_base_url
+        self.embeddings = EmbeddingsFactory.create_embeddings(
+            model=embedding_model
         )
 
         self.vectorstore: Optional[Chroma] = None

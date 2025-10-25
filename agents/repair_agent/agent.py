@@ -4,7 +4,6 @@ Agente com RAG e busca web que responde perguntas sobre reparos residenciais
 usando modelos locais, base de conhecimento em PDFs e busca na internet
 """
 
-from langchain_ollama import ChatOllama
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from pydantic import BaseModel, Field
 from typing import Optional, List
@@ -23,6 +22,7 @@ from .prompts import (
 
 from agents.rag import VectorStoreManager, DocumentRetriever
 from agents.tools import WebSearchTool
+from agents.llm import LLMFactory
 
 
 class ConversationState(Enum):
@@ -38,9 +38,9 @@ class RepairAgent:
 
     def __init__(
         self,
-        model_name: str = "qwen2.5:3b",
-        temperature: float = 0.3,
-        num_predict: int = 500,
+        model_name: Optional[str] = None,
+        temperature: Optional[float] = None,
+        num_predict: Optional[int] = None,
         base_url: Optional[str] = None,
         max_attempts: int = 3,
         use_rag: bool = True,
@@ -51,24 +51,24 @@ class RepairAgent:
         Inicializa o agente de reparos residenciais
 
         Args:
-            model_name: Nome do modelo Ollama a ser usado
-            temperature: Controla a criatividade das respostas (0.0 a 1.0)
-            num_predict: Limita tokens de resposta
-            base_url: URL do servidor Ollama, usa OLLAMA_BASE_URL ou localhost:11434 por padrão
+            model_name: Nome do modelo a ser usado (usa padrão do provedor se None)
+            temperature: Controla a criatividade das respostas (0.0 a 1.0, usa padrão se None)
+            num_predict: Limita tokens de resposta (usa padrão se None)
+            base_url: URL do servidor (apenas para Ollama, usa OLLAMA_BASE_URL se None)
             max_attempts: Número máximo de tentativas antes de sugerir profissional
             use_rag: Se True, usa RAG para buscar documentos relevantes
             use_web_search: Se True, usa busca web quando RAG não encontra informações
             chroma_db_path: Caminho para o banco de dados ChromaDB
         """
-        # Usa variável de ambiente se base_url não foi especificado
-        if base_url is None:
-            base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-
-        self.llm = ChatOllama(
+        llm_kwargs = {}
+        if base_url:
+            llm_kwargs["base_url"] = base_url
+        
+        self.llm = LLMFactory.create_llm(
             model=model_name,
             temperature=temperature,
-            num_predict=num_predict,
-            base_url=base_url
+            max_tokens=num_predict,
+            **llm_kwargs
         )
 
         self.max_attempts = max_attempts
@@ -83,8 +83,7 @@ class RepairAgent:
         if use_rag and os.path.exists(chroma_db_path):
             try:
                 vectorstore_manager = VectorStoreManager(
-                    persist_directory=chroma_db_path,
-                    ollama_base_url=base_url
+                    persist_directory=chroma_db_path
                 )
                 # Carrega o vectorstore existente
                 vectorstore = vectorstore_manager.load_vectorstore()
