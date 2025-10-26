@@ -57,6 +57,7 @@ chroma_db/
 # Environment variables
 .env
 .env.local
+.env.production
 
 # PDFs - apenas ignorar os arquivos, não a pasta
 pdfs/*.pdf
@@ -103,3 +104,7 @@ dist-ssr
 
 # Misc
 project.md
+tarefa.md
+
+# Claudio
+.claude-outputs/

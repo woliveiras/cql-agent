@@ -52,7 +52,7 @@ all-providers = [
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["api"]
+testpaths = ["api/tests"]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
@@ -60,10 +60,15 @@ addopts = [
     "-v",
     "--strict-markers",
     "--tb=short",
+    "--cov=api",
+    "--cov=agents",
+    "--cov-report=html",
+    "--cov-report=term-missing",
 ]
 markers = [
     "slow: marks tests as slow",
     "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
 ]
 filterwarnings = [
     "ignore::DeprecationWarning:spacy.*:",
