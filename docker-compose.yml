@@ -1,4 +1,21 @@
 services:
+  redis:
+    image: redis:7-alpine
+    container_name: repair-agent-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - repair-network
+    restart: unless-stopped
+
   ollama:
     image: ollama/ollama:latest
     container_name: repair-agent-ollama
@@ -21,11 +38,17 @@ services:
       - OLLAMA_BASE_URL=http://ollama:11434
       - PYTHONUNBUFFERED=1
       - LOG_LEVEL=info
+      - USE_REDIS=true
+      - REDIS_URL=redis://redis:6379/0
+      - SESSION_TTL=3600
     volumes:
       - ./chroma_db:/app/chroma_db
       - ./pdfs:/app/pdfs:ro
     depends_on:
-      - ollama
+      redis:
+        condition: service_healthy
+      ollama:
+        condition: service_started
     networks:
       - repair-network
     restart: unless-stopped
@@ -55,6 +78,8 @@ networks:
     driver: bridge
 
 volumes:
+  redis_data:
+    driver: local
   ollama_data:
     driver: local
   openwebui_data:

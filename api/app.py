@@ -20,6 +20,7 @@ import time  # noqa: E402
 import re  # noqa: E402
 
 from api.logging_config import setup_logging, get_logger, LogContext  # noqa: E402
+from api.session_manager import SessionManager  # noqa: E402
 from api.security.guardrails import ContentGuardrailError  # noqa: E402
 from api.security.sanitizer import SanitizationError  # noqa: E402
 from api.security import sanitize_input, ContentGuardrail  # noqa: E402
@@ -214,8 +215,9 @@ class MessageResponse(BaseModel):
     message: str
 
 
-# Armazenamento de sessões em memória
-sessions: Dict[str, RepairAgent] = {}
+# Inicialização do gerenciador de sessões
+use_redis = os.getenv("USE_REDIS", "false").lower() == "true"
+session_manager = SessionManager(use_redis=use_redis)
 
 # Inicialização do Content Guardrail
 content_guardrail = ContentGuardrail(strict_mode=False)
@@ -223,21 +225,11 @@ content_guardrail = ContentGuardrail(strict_mode=False)
 
 def get_or_create_agent(session_id: str, use_rag: bool = True, use_web_search: bool = True) -> RepairAgent:
     """Obtém ou cria um agente para a sessão"""
-    if session_id not in sessions:
-        logger.info(
-            "Criando novo agente para sessão",
-            extra={
-                "session_id": session_id,
-                "use_rag": use_rag,
-                "use_web_search": use_web_search,
-                "event_type": "agent_created"
-            }
-        )
-        sessions[session_id] = RepairAgent(
-            use_rag=use_rag,
-            use_web_search=use_web_search
-        )
-    return sessions[session_id]
+    return session_manager.get_or_create_agent(
+        session_id=session_id,
+        use_rag=use_rag,
+        use_web_search=use_web_search
+    )
 
 
 # Endpoints
@@ -367,6 +359,9 @@ async def send_message(request: ChatRequest):
             )
             response = agent.chat(sanitized_message)
 
+            # Persistir mudanças de estado do agente
+            session_manager.update_agent(request.session_id, agent)
+
             duration_ms = int((time.time() - start_time) * 1000)
             logger.info(
                 "Mensagem processada com sucesso",
@@ -413,8 +408,10 @@ async def send_message(request: ChatRequest):
 @app.delete("/api/v1/chat/reset/{session_id}", response_model=MessageResponse, tags=["Chat"])
 async def reset_session(session_id: str):
     """Reseta uma sessão"""
-    if session_id in sessions:
-        sessions[session_id].reset()
+    agent = session_manager.store.get(session_id)
+    if agent:
+        agent.reset()
+        session_manager.update_agent(session_id, agent)
         return MessageResponse(message=f"Sessão {session_id} resetada")
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
@@ -425,9 +422,14 @@ async def reset_session(session_id: str):
 @app.get("/api/v1/chat/sessions", response_model=SessionsResponse, tags=["Chat"])
 async def list_sessions():
     """Lista sessões ativas"""
+    sessions_data = session_manager.list_sessions()
     session_list = [
-        SessionInfo(session_id=sid, state=agent.state.value, current_attempt=agent.current_attempt)
-        for sid, agent in sessions.items()
+        SessionInfo(
+            session_id=s['session_id'],
+            state=s['state'],
+            current_attempt=s['current_attempt']
+        )
+        for s in sessions_data
     ]
     return SessionsResponse(sessions=session_list, total=len(session_list))
 

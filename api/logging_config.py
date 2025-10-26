@@ -12,10 +12,17 @@ import logging
 import sys
 import os
 from typing import Optional, Dict, Any
-from pythonjsonlogger import jsonlogger
+
+try:
+    # Novo caminho (python-json-logger >= 3.0)
+    from pythonjsonlogger.json import JsonFormatter
+except ImportError:
+    # Caminho antigo (python-json-logger < 3.0)
+    from pythonjsonlogger import jsonlogger
+    JsonFormatter = jsonlogger.JsonFormatter
 
 
-class CustomJsonFormatter(jsonlogger.JsonFormatter):
+class CustomJsonFormatter(JsonFormatter):
     """
     Formatter customizado para logs em JSON com campos adicionais
 
