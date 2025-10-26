@@ -14,20 +14,21 @@ from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from fastapi.responses import JSONResponse  # noqa: E402
 from pydantic import BaseModel, Field  # noqa: E402
 from typing import Optional, Dict, Any, List  # noqa: E402
-import logging  # noqa: E402
 from datetime import datetime, timezone  # noqa: E402
+import time  # noqa: E402
 
+from api.logging_config import setup_logging, get_logger, LogContext  # noqa: E402
 from api.security.guardrails import ContentGuardrailError  # noqa: E402
 from api.security.sanitizer import SanitizationError  # noqa: E402
 from api.security import sanitize_input, ContentGuardrail  # noqa: E402
 from agents import RepairAgent  # noqa: E402
 
-# Configuração de logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+# Configuração de logging estruturado
+setup_logging(
+    level=os.getenv("LOG_LEVEL", "INFO"),
+    json_logs=os.getenv("JSON_LOGS", "false").lower() == "true"
 )
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, component="api")
 
 # Inicialização do FastAPI
 app = FastAPI(
@@ -144,7 +145,15 @@ content_guardrail = ContentGuardrail(strict_mode=False)
 def get_or_create_agent(session_id: str, use_rag: bool = True, use_web_search: bool = True) -> RepairAgent:
     """Obtém ou cria um agente para a sessão"""
     if session_id not in sessions:
-        logger.info(f"Criando novo agente para sessão: {session_id}")
+        logger.info(
+            "Criando novo agente para sessão",
+            extra={
+                "session_id": session_id,
+                "use_rag": use_rag,
+                "use_web_search": use_web_search,
+                "event_type": "agent_created"
+            }
+        )
         sessions[session_id] = RepairAgent(
             use_rag=use_rag,
             use_web_search=use_web_search
@@ -183,7 +192,14 @@ async def send_message(request: ChatRequest):
         try:
             sanitized_message = sanitize_input(request.message)
         except SanitizationError as e:
-            logger.warning(f"Sanitização falhou: {e}")
+            logger.warning(
+                "Sanitização falhou",
+                extra={
+                    "session_id": request.session_id,
+                    "error": str(e),
+                    "event_type": "sanitization_failed"
+                }
+            )
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail={
@@ -258,8 +274,29 @@ async def send_message(request: ChatRequest):
                 )
 
         # Processar mensagem
-        logger.info(f"Processando mensagem da sessão {request.session_id}")
-        response = agent.chat(sanitized_message)
+        start_time = time.time()
+
+        with LogContext(session_id=request.session_id, event_type="message_processing"):
+            logger.info(
+                "Processando mensagem",
+                extra={
+                    "message_length": len(sanitized_message),
+                    "use_rag": request.use_rag,
+                    "use_web_search": request.use_web_search,
+                    "relevance_score": validation_result['score']
+                }
+            )
+            response = agent.chat(sanitized_message)
+
+            duration_ms = int((time.time() - start_time) * 1000)
+            logger.info(
+                "Mensagem processada com sucesso",
+                extra={
+                    "state": agent.state.value,
+                    "current_attempt": agent.current_attempt,
+                    "duration_ms": duration_ms
+                }
+            )
 
         return ChatResponse(
             response=response,
@@ -278,7 +315,16 @@ async def send_message(request: ChatRequest):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Erro: {e}", exc_info=True)
+        logger.error(
+            "Erro inesperado ao processar mensagem",
+            extra={
+                "session_id": request.session_id,
+                "error_type": type(e).__name__,
+                "error": str(e),
+                "event_type": "error"
+            },
+            exc_info=True
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={'error': 'Erro interno', 'details': str(e)}
@@ -315,5 +361,13 @@ async def root():
 
 if __name__ == "__main__":
     import uvicorn
-    logger.info("Iniciando Repair Agent API...")
+    logger.info(
+        "Iniciando Repair Agent API",
+        extra={
+            "event_type": "startup",
+            "host": "0.0.0.0",
+            "port": 5000,
+            "reload": True
+        }
+    )
     uvicorn.run("api.app:app", host="0.0.0.0", port=5000, reload=True)

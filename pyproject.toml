@@ -33,6 +33,7 @@ dependencies = [
     "rapidfuzz>=3.14.1",
     "pip-audit>=2.6.0",
     "safety>=3.0.0",
+    "python-json-logger>=3.2.1",
 ]
 
 [project.optional-dependencies]
