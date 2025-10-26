@@ -133,5 +133,13 @@ jobs:
         run: uv run pylint **/*.py --fail-under=8.0
         continue-on-error: true
       
-      - name: Run API unit tests
-        run: uv run pytest -v
+      - name: Run API tests with coverage
+        run: uv run pytest -v --cov=api --cov=agents --cov-report=term-missing --cov-report=xml
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+        continue-on-error: true
