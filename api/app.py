@@ -219,7 +219,6 @@ class MessageResponse(BaseModel):
 
 # Inicialização do gerenciador de sessões
 use_redis = os.getenv("USE_REDIS", "false").lower() == "true"
-print(f"Usando Redis para gerenciamento de sessões: {use_redis}")
 session_manager = SessionManager(use_redis=use_redis)
 
 # Inicialização do Content Guardrail

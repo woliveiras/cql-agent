@@ -4,6 +4,7 @@ Agente de IA especializado em ajudar com pequenos reparos residenciais, constru�
 
 [![on_push_to_main](https://github.com/woliveiras/cql-agent/actions/workflows/on_push_to_main.yml/badge.svg)](https://github.com/woliveiras/cql-agent/actions/workflows/on_push_to_main.yml)
 
+
 ## ✨ Funcionalidades
 
 - 🤖 Chat interativo para perguntas sobre reparos
@@ -39,6 +40,46 @@ Agente de IA especializado em ajudar com pequenos reparos residenciais, constru�
 - 🚫 Proteção contra injection (SQL, XSS, Command)
 - 🎯 Guardrails de conteúdo (apenas reparos residenciais)
 - ⚡ Performance otimizada (async/await)
+
+## 🗄️ Gerenciamento de Sessões com Redis
+
+O agente suporta persistência de sessões via Redis, permitindo escalabilidade e recuperação de sessões após reinício. O backend detecta automaticamente se o Redis está habilitado via `.env`:
+
+- Para usar Redis, defina no `.env`:
+
+```bash
+USE_REDIS=true
+REDIS_URL=redis://localhost:6379/0  # Ou configure manualmente REDIS_HOST, REDIS_PORT, etc.
+```
+
+- Para usar apenas memória (desenvolvimento):
+
+```bash
+USE_REDIS=false
+```
+
+Se o Redis não estiver disponível, o sistema faz fallback automático para armazenamento em memória, sem perder funcionalidade.
+
+No Docker Compose, o Redis já está configurado e integrado. Veja detalhes e exemplos avançados em [`docs/REDIS_SESSIONS.md`](docs/REDIS_SESSIONS.md).
+
+**Exemplo de configuração mínima no .env:**
+
+```bash
+USE_REDIS=true
+REDIS_URL=redis://localhost:6379/0
+```
+
+**Exemplo de uso no código:**
+
+```python
+from api.session_manager import SessionManager
+manager = SessionManager(use_redis=True)
+agent = manager.get_or_create_agent(session_id="user-123")
+manager.update_agent("user-123", agent)
+```
+
+> Para TTL, prefixo de chave e outras opções, consulte o guia completo em [`docs/REDIS_SESSIONS.md`](docs/REDIS_SESSIONS.md).
+
 
 ## 🏗️ Arquitetura
 
