@@ -9,13 +9,15 @@ import os
 # Adicionar path para imports (deve vir antes dos imports locais)
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from fastapi import FastAPI, HTTPException, status  # noqa: E402
+from fastapi import FastAPI, HTTPException, status, Request  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from fastapi.responses import JSONResponse  # noqa: E402
-from pydantic import BaseModel, Field  # noqa: E402
+from fastapi.exceptions import RequestValidationError  # noqa: E402
+from pydantic import BaseModel, Field, field_validator, ValidationError  # noqa: E402
 from typing import Optional, Dict, Any, List  # noqa: E402
 from datetime import datetime, timezone  # noqa: E402
 import time  # noqa: E402
+import re  # noqa: E402
 
 from api.logging_config import setup_logging, get_logger, LogContext  # noqa: E402
 from api.security.guardrails import ContentGuardrailError  # noqa: E402
@@ -81,6 +83,83 @@ class ChatRequest(BaseModel):
         default=True,
         description="Usar busca web como fallback"
     )
+
+    @field_validator('message')
+    @classmethod
+    def validate_message(cls, v: str) -> str:
+        """
+        Valida e sanitiza a mensagem do usuário
+
+        Args:
+            v: Mensagem a validar
+
+        Returns:
+            Mensagem sanitizada (trim de espaços)
+
+        Raises:
+            ValueError: Se a mensagem for inválida
+        """
+        # Remover espaços em branco no início e fim
+        v = v.strip()
+
+        # Verificar se não ficou vazia após trim
+        if not v:
+            raise ValueError('Mensagem não pode ser vazia ou conter apenas espaços')
+
+        # Verificar se não contém apenas caracteres especiais
+        if not re.search(r'[a-zA-Z0-9\u00C0-\u017F]', v):
+            raise ValueError('Mensagem deve conter pelo menos letras ou números')
+
+        # Verificar caracteres nulos (segurança)
+        if '\x00' in v:
+            raise ValueError('Mensagem contém caracteres inválidos (null bytes)')
+
+        # Verificar excesso de caracteres repetidos (possível DoS)
+        if re.search(r'(.)\1{49,}', v):  # 50+ caracteres repetidos
+            raise ValueError('Mensagem contém caracteres repetidos excessivamente')
+
+        # Verificar excesso de quebras de linha
+        if v.count('\n') > 20:
+            raise ValueError('Mensagem contém muitas quebras de linha')
+
+        return v
+
+    @field_validator('session_id')
+    @classmethod
+    def validate_session_id(cls, v: Optional[str]) -> str:
+        """
+        Valida o session_id
+
+        Args:
+            v: Session ID a validar
+
+        Returns:
+            Session ID validado
+
+        Raises:
+            ValueError: Se o session_id for inválido
+        """
+        if v is None:
+            return "default"
+
+        v = v.strip()
+
+        if not v:
+            return "default"
+
+        # Verificar tamanho mínimo
+        if len(v) < 1:
+            raise ValueError('Session ID muito curto')
+
+        # Verificar padrão (já validado pelo Field pattern, mas reforçando)
+        if not re.match(r'^[a-zA-Z0-9_\-]+$', v):
+            raise ValueError('Session ID deve conter apenas letras, números, _ e -')
+
+        # Verificar se não é uma tentativa de path traversal
+        if '..' in v or '/' in v or '\\' in v:
+            raise ValueError('Session ID contém caracteres não permitidos')
+
+        return v
 
     model_config = {
         "json_schema_extra": {
