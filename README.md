@@ -345,6 +345,9 @@ Este projeto segue boas práticas de desenvolvimento:
 - ✅ **Factory Pattern**: Abstração de provedores LLM através de factories
 - ✅ **Validação**: Validação de entrada/saída com Pydantic
 - ✅ **Logging**: Sistema de logs estruturado
+- ✅ **Testes automatizados**: Suíte completa com 136+ testes (unit + integration)
+- ✅ **Coverage**: Cobertura de código com pytest-cov
+- ✅ **CI/CD**: GitHub Actions com testes automáticos
 - ✅ **Containerização**: Deploy completo com Docker Compose
 
 ## 🔌 Provedores de LLM Suportados
@@ -449,15 +452,21 @@ cql-agent/
 │   ├── __init__.py
 │   ├── app.py                 # FastAPI + Swagger automático
 │   ├── gunicorn.conf.py       # Configuração Gunicorn (produção)
-│   ├── test_api.py            # Testes da API
 │   ├── README.md
-│   └── security/              # 🛡️ Módulo de segurança
-│       ├── __init__.py
-│       ├── sanitizer.py       # Sanitização de entrada
-│       ├── guardrails.py      # Validação de conteúdo com SpaCy
-│       ├── test_security.py   # Testes unitários
-│       ├── test_api_security.py  # Testes de integração
-│       └── README.md          # Documentação de segurança
+│   ├── security/              # 🛡️ Módulo de segurança
+│   │   ├── __init__.py
+│   │   ├── sanitizer.py       # Sanitização de entrada
+│   │   ├── guardrails.py      # Validação de conteúdo com SpaCy
+│   │   ├── ner_repair.py      # Named Entity Recognition
+│   │   ├── context_analyzer.py  # Análise de contexto sintático
+│   │   ├── intention_analyzer.py  # Análise de intenção comunicativa
+│   │   └── README.md          # Documentação de segurança
+│   └── tests/                 # 🧪 Testes automatizados
+│       ├── conftest.py        # Fixtures compartilhadas
+│       ├── unit/              # Testes unitários
+│       │   └── security/      # Testes de segurança
+│       ├── integration/       # Testes de integração
+│       └── README.md          # Documentação de testes
 ├── web/                       # 🎨 Frontend React
 │   ├── src/
 │   │   ├── components/        # Componentes reutilizáveis
@@ -526,15 +535,32 @@ O projeto implementa múltiplas camadas de segurança:
 - Não vaza detalhes internos
 - Logs detalhados para auditoria
 
-### Testes de Segurança
+### Testes Automatizados
+
+O projeto possui uma suíte completa de testes organizados por tipo:
 
 ```bash
-# Testes unitários
-pytest security/test_security.py -v
+# Executar todos os testes
+pytest
+
+# Testes unitários (136 testes)
+pytest api/tests/unit/ -v
 
 # Testes de integração (API deve estar rodando)
-python security/test_api_security.py
+pytest api/tests/integration/ -v
+
+# Testes com cobertura
+pytest --cov=api --cov=agents --cov-report=html
+
+# Ver relatório de cobertura
+open htmlcov/index.html
 ```
+
+**Estrutura de testes:**
+- **Unit**: Testes de componentes isolados (sanitização, NER, análise de contexto, etc.)
+- **Integration**: Testes de fluxos completos da API e segurança
+
+Veja [api/tests/README.md](api/tests/README.md) para documentação completa.
 
 ## 🐛 Troubleshooting
 
