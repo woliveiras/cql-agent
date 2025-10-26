@@ -36,6 +36,7 @@ dependencies = [
     "python-json-logger>=3.2.1",
     "redis>=5.0.0",
     "python-dotenv>=1.1.1",
+    "pyjwt>=2.8.0",
 ]
 
 [project.optional-dependencies]

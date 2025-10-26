@@ -26,6 +26,7 @@ from api.session_manager import SessionManager  # noqa: E402
 from api.security.guardrails import ContentGuardrailError  # noqa: E402
 from api.security.sanitizer import SanitizationError  # noqa: E402
 from api.security import sanitize_input, ContentGuardrail  # noqa: E402
+from api.auth import AuthMiddleware  # noqa: E402
 from agents import RepairAgent  # noqa: E402
 
 # Configuração de logging estruturado
@@ -51,12 +52,40 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5001",
         "http://127.0.0.1:5001",
+        "http://localhost:5173",  # Frontend React (Vite)
         "*"  # Permite qualquer origem em desenvolvimento
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Middleware de autenticação e rate limiting
+# Configurável via variáveis de ambiente
+auth_enabled = os.getenv("AUTH_ENABLED", "true").lower() == "true"
+rate_limit_enabled = os.getenv("RATE_LIMIT_ENABLED", "true").lower() == "true"
+rate_limit = int(os.getenv("RATE_LIMIT", "100"))
+rate_window = int(os.getenv("RATE_WINDOW", "3600"))
+
+if auth_enabled:
+    logger.info(
+        "Middleware de autenticação ativado",
+        extra={
+            "rate_limit_enabled": rate_limit_enabled,
+            "rate_limit": rate_limit,
+            "rate_window": rate_window,
+            "use_redis": os.getenv("USE_REDIS", "false").lower() == "true"
+        }
+    )
+    app.add_middleware(
+        AuthMiddleware,
+        enabled=True,
+        rate_limit_enabled=rate_limit_enabled,
+        rate_limit=rate_limit,
+        rate_window=rate_window,
+        use_redis=os.getenv("USE_REDIS", "false").lower() == "true",
+        excluded_paths=["/health", "/docs", "/redoc", "/openapi.json", "/api/v1/openapi.json", "/"]
+    )
 
 
 # Modelos Pydantic

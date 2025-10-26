@@ -40,6 +40,9 @@ Agente de IA especializado em ajudar com pequenos reparos residenciais, constru�
 - 🚫 Proteção contra injection (SQL, XSS, Command)
 - 🎯 Guardrails de conteúdo (apenas reparos residenciais)
 - ⚡ Performance otimizada (async/await)
+- 🔐 Autenticação anônima (sem necessidade de login)
+- ⏱️ Rate limiting inteligente (proteção contra abuso)
+- 🎫 Tokens JWT temporários (gestão automática)
 
 ## 🗄️ Gerenciamento de Sessões com Redis
 
@@ -79,6 +82,54 @@ manager.update_agent("user-123", agent)
 ```
 
 > Para TTL, prefixo de chave e outras opções, consulte o guia completo em [`docs/REDIS_SESSIONS.md`](docs/REDIS_SESSIONS.md).
+
+## 🔐 Autenticação e Rate Limiting
+
+O sistema implementa **autenticação anônima** e **rate limiting** de forma **100% transparente** para o usuário - sem necessidade de login ou criação de conta!
+
+### Como Funciona
+
+1. **Fingerprinting**: Identifica usuários por IP + User-Agent
+2. **JWT Anônimo**: Gera tokens temporários automaticamente
+3. **Rate Limiting**: Limita requests por período (ex: 100/hora)
+4. **Redis Support**: Escalável e distribuído
+
+### Configuração Básica
+
+```bash
+# .env
+AUTH_ENABLED=true
+RATE_LIMIT_ENABLED=true
+RATE_LIMIT=100          # 100 requests
+RATE_WINDOW=3600        # por hora
+JWT_SECRET_KEY=sua_chave_secreta_forte
+```
+
+### Uso no Frontend
+
+```javascript
+// O token é gerenciado automaticamente!
+const response = await fetch('/api/v1/chat/message', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${localStorage.getItem('anonymous_token')}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({ message: 'Como consertar torneira?' })
+});
+
+// Salvar novo token (se fornecido)
+const newToken = response.headers.get('X-Anonymous-Token');
+if (newToken) localStorage.setItem('anonymous_token', newToken);
+```
+
+**Vantagens:**
+- ✅ Usuário nunca faz login
+- ✅ Proteção contra abuso
+- ✅ Experiência fluida
+- ✅ Escalável com Redis
+
+📖 **Documentação completa:** [docs/AUTH_RATE_LIMITING.md](docs/AUTH_RATE_LIMITING.md)
 
 
 ## 🏗️ Arquitetura
