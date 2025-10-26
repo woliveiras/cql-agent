@@ -298,6 +298,27 @@ command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru
 SESSION_TTL=7200  # 2 horas
 ```
 
+## Ferramentas de Visualização
+
+### RedisInsight (Recomendado) 🌟
+
+**Ferramenta oficial da Redis com interface gráfica moderna**
+
+```bash
+# macOS
+brew install --cask redisinsight
+
+# Ou baixar em: https://redis.io/insight/
+```
+
+**Features**:
+
+- Interface gráfica intuitiva
+- Visualização de dados em tempo real
+- Monitor de performance
+- CLI integrado
+- Memory analysis
+
 ## Performance
 
 ### Benchmarks
@@ -310,7 +331,7 @@ SESSION_TTL=7200  # 2 horas
 
 1. **Pipeline Commands**: Para operações em lote
 2. **Connection Pooling**: Automático no cliente Redis
-3. **Serialização**: Pickle é rápido para objetos Python
+3. **Serialização**: JSON customizado para objetos Python
 4. **TTL**: Evita acúmulo de sessões antigas
 
 ## Migração

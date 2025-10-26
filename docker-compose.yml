@@ -16,62 +16,62 @@ services:
       - repair-network
     restart: unless-stopped
 
-  ollama:
-    image: ollama/ollama:latest
-    container_name: repair-agent-ollama
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-    networks:
-      - repair-network
-    restart: unless-stopped
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   container_name: repair-agent-ollama
+  #   ports:
+  #     - "11434:11434"
+  #   volumes:
+  #     - ollama_data:/root/.ollama
+  #   networks:
+  #     - repair-network
+  #   restart: unless-stopped
 
-  api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: repair-agent-api
-    ports:
-      - "5000:5000"
-    environment:
-      - OLLAMA_BASE_URL=http://ollama:11434
-      - PYTHONUNBUFFERED=1
-      - LOG_LEVEL=info
-      - USE_REDIS=true
-      - REDIS_URL=redis://redis:6379/0
-      - SESSION_TTL=3600
-    volumes:
-      - ./chroma_db:/app/chroma_db
-      - ./pdfs:/app/pdfs:ro
-    depends_on:
-      redis:
-        condition: service_healthy
-      ollama:
-        condition: service_started
-    networks:
-      - repair-network
-    restart: unless-stopped
+  # api:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: repair-agent-api
+  #   ports:
+  #     - "5000:5000"
+  #   environment:
+  #     - OLLAMA_BASE_URL=http://ollama:11434
+  #     - PYTHONUNBUFFERED=1
+  #     - LOG_LEVEL=info
+  #     - USE_REDIS=true
+  #     - REDIS_URL=redis://redis:6379/0
+  #     - SESSION_TTL=3600
+  #   volumes:
+  #     - ./chroma_db:/app/chroma_db
+  #     - ./pdfs:/app/pdfs:ro
+  #   depends_on:
+  #     redis:
+  #       condition: service_healthy
+  #     ollama:
+  #       condition: service_started
+  #   networks:
+  #     - repair-network
+  #   restart: unless-stopped
 
-  openwebui:
-    image: ghcr.io/open-webui/open-webui:main
-    container_name: repair-agent-openwebui
-    ports:
-      - "8080:8080"
-    environment:
-      - OLLAMA_BASE_URL=http://ollama:11434
-      - WEBUI_AUTH=false
-      - ENABLE_RAG_WEB_SEARCH=true
-      - ENABLE_OLLAMA_API=true
-    volumes:
-      - openwebui_data:/app/backend/data
-      - ./openwebui/pipe.py:/app/backend/pipes/repair_agent_pipe.py:ro
-    depends_on:
-      - ollama
-      - api
-    networks:
-      - repair-network
-    restart: unless-stopped
+  # openwebui:
+  #   image: ghcr.io/open-webui/open-webui:main
+  #   container_name: repair-agent-openwebui
+  #   ports:
+  #     - "8080:8080"
+  #   environment:
+  #     - OLLAMA_BASE_URL=http://ollama:11434
+  #     - WEBUI_AUTH=false
+  #     - ENABLE_RAG_WEB_SEARCH=true
+  #     - ENABLE_OLLAMA_API=true
+  #   volumes:
+  #     - openwebui_data:/app/backend/data
+  #     - ./openwebui/pipe.py:/app/backend/pipes/repair_agent_pipe.py:ro
+  #   depends_on:
+  #     - ollama
+  #     - api
+  #   networks:
+  #     - repair-network
+  #   restart: unless-stopped
 
 networks:
   repair-network:

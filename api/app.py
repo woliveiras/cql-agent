@@ -5,6 +5,8 @@ Fornece endpoints REST para integração com OpenWebUI e outros frontends
 
 import sys
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
 # Adicionar path para imports (deve vir antes dos imports locais)
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -217,6 +219,7 @@ class MessageResponse(BaseModel):
 
 # Inicialização do gerenciador de sessões
 use_redis = os.getenv("USE_REDIS", "false").lower() == "true"
+print(f"Usando Redis para gerenciamento de sessões: {use_redis}")
 session_manager = SessionManager(use_redis=use_redis)
 
 # Inicialização do Content Guardrail
