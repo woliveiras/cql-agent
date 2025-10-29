@@ -63,13 +63,13 @@ export const StyledTextarea = styled.textarea<{ theme?: Theme }>`
 
 export const CharCounter = styled.span<{ isLimit: boolean; theme?: Theme }>`
   position: absolute;
-  bottom: ${(props) => props.theme?.spacing.xs || '0.25rem'};
-  right: ${(props) => props.theme?.spacing.sm || '0.5rem'};
-  font-size: ${(props) => props.theme?.typography.fontSize.xs || '0.75rem'};
+  bottom: ${(props) => props.theme?.spacing.xs || "1.25rem"};
+  right: ${(props) => props.theme?.spacing.sm || "1.5rem"};
+  font-size: ${(props) => props.theme?.typography.fontSize.xs || "0.75rem"};
   color: ${(props) =>
     props.isLimit
-      ? props.theme?.colors.error.main || '#DC2626'
-      : props.theme?.colors.text.disabled || '#94A3B8'};
+      ? props.theme?.colors.error.main || "#DC2626"
+      : props.theme?.colors.text.disabled || "#94A3B8"};
   pointer-events: none;
 `;
 
