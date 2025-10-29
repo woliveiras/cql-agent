@@ -23,6 +23,7 @@ from .prompts import (
 from agents.rag import VectorStoreManager, DocumentRetriever
 from agents.tools import WebSearchTool
 from agents.llm import LLMFactory
+from agents.circuit_breaker import CircuitBreaker, CircuitBreakerError
 from api.logging_config import get_logger
 
 # Logger para o agente
@@ -81,6 +82,11 @@ class RepairAgent:
         self.state = ConversationState.NEW_PROBLEM
         self.use_rag = use_rag
         self.use_web_search = use_web_search
+
+        # Inicializa circuit breakers
+        self.llm_breaker = CircuitBreaker(name="LLM", failure_threshold=5, timeout_seconds=60)
+        self.rag_breaker = CircuitBreaker(name="RAG", failure_threshold=3, timeout_seconds=30)
+        self.web_breaker = CircuitBreaker(name="WebSearch", failure_threshold=3, timeout_seconds=30)
 
         # Inicializa RAG se disponível
         self.retriever: Optional[DocumentRetriever] = None
@@ -245,9 +251,16 @@ class RepairAgent:
 
         if self.retriever and self.state == ConversationState.NEW_PROBLEM:
             try:
-                rag_context, has_relevant = self.retriever.retrieve_and_format(user_message)
+                # Usa circuit breaker para proteger chamadas ao RAG
+                rag_context, has_relevant = self.rag_breaker.call(
+                    self.retriever.retrieve_and_format,
+                    user_message
+                )
                 if has_relevant:
                     logger.info("RAG: informações relevantes encontradas na base de conhecimento")
+            except CircuitBreakerError as e:
+                logger.warning(f"RAG circuit breaker aberto: {e}")
+                rag_context = None
             except Exception as e:
                 logger.error(f"Erro ao buscar documentos no RAG: {e}", exc_info=True)
                 rag_context = None
@@ -256,11 +269,18 @@ class RepairAgent:
         if not rag_context and self.web_search and self.state == ConversationState.NEW_PROBLEM:
             try:
                 logger.info("Buscando informações na internet...")
-                web_context = self.web_search.search(user_message)
+                # Usa circuit breaker para proteger chamadas à Web Search
+                web_context = self.web_breaker.call(
+                    self.web_search.search,
+                    user_message
+                )
                 if web_context:
                     logger.info("Web Search: informações atualizadas encontradas")
                 else:
                     logger.warning("Web Search: nenhuma informação relevante encontrada")
+            except CircuitBreakerError as e:
+                logger.warning(f"Web Search circuit breaker aberto: {e}")
+                web_context = None
             except Exception as e:
                 logger.error(f"Erro na busca web: {e}", exc_info=True)
                 web_context = None
@@ -277,8 +297,12 @@ class RepairAgent:
             *self.conversation_history
         ]
 
-        # Obtém resposta do modelo
-        response = self.llm.invoke(messages)
+        # Obtém resposta do modelo com circuit breaker
+        try:
+            response = self.llm_breaker.call(self.llm.invoke, messages)
+        except CircuitBreakerError as e:
+            logger.error(f"LLM circuit breaker aberto: {e}")
+            return "Desculpe, estou temporariamente indisponível. Por favor, tente novamente em alguns instantes."
 
         # Adiciona resposta ao histórico
         self.conversation_history.append(AIMessage(content=response.content))

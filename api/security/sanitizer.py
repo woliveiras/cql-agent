@@ -17,6 +17,38 @@ class SanitizationError(Exception):
     pass
 
 
+# ============================================================================
+# PRÉ-COMPILAÇÃO DE REGEX PATTERNS
+# ============================================================================
+
+# Padrões SQL injection óbvios
+SQL_INJECTION_PATTERNS = [
+    re.compile(r"'\s*OR\s+'", re.IGNORECASE),  # ' OR ' (bypass autenticação)
+    re.compile(r"'\s*OR\s+\d+\s*=\s*\d+", re.IGNORECASE),  # ' OR 1=1
+    re.compile(r"\bUNION\b.*\bSELECT\b", re.IGNORECASE),  # UNION SELECT
+]
+
+# Padrões de command injection óbvio
+COMMAND_INJECTION_PATTERNS = [
+    re.compile(r";\s*rm\s+-rf", re.IGNORECASE),  # ; rm -rf /
+    re.compile(r"\|\s*bash", re.IGNORECASE),  # | bash
+    re.compile(r"&&\s*rm\s+", re.IGNORECASE),  # && rm
+    re.compile(r"\$\(.*\)", re.IGNORECASE),  # Command substitution $(...)
+]
+
+# Padrões JavaScript perigosos
+JAVASCRIPT_XSS_PATTERNS = [
+    re.compile(r"javascript\s*:", re.IGNORECASE),
+    re.compile(r"on\w+\s*=", re.IGNORECASE),  # onclick=, onload=, etc
+    re.compile(r"<script", re.IGNORECASE),
+    re.compile(r"</script>", re.IGNORECASE),
+]
+
+# Outros padrões úteis
+WHITESPACE_PATTERN = re.compile(r'\s+')
+REPEATED_CHARS_PATTERN = re.compile(r'(.)\1{99,}')  # 100+ caracteres repetidos
+
+
 def _detect_sql_injection(text: str) -> bool:
     """
     Detecta SQL injection usando sqlparse (biblioteca especializada)
@@ -81,15 +113,9 @@ def _detect_sql_injection(text: str) -> bool:
 
         # Mesmo que sqlparse não detecte, verifica padrões óbvios
         # de SQL injection que podem escapar do parser
-        obvious_patterns = [
-            r"'\s*OR\s+'",  # ' OR ' (bypass autenticação)
-            r"'\s*OR\s+\d+\s*=\s*\d+",  # ' OR 1=1
-            r"\bUNION\b.*\bSELECT\b",  # UNION SELECT
-        ]
-
-        for pattern in obvious_patterns:
-            if re.search(pattern, text, re.IGNORECASE):
-                logger.warning(f"Padrão SQL injection detectado: {pattern}")
+        for pattern in SQL_INJECTION_PATTERNS:
+            if pattern.search(text):
+                logger.warning(f"Padrão SQL injection detectado: {pattern.pattern}")
                 return True
 
         return False
@@ -113,17 +139,10 @@ def _detect_obvious_attacks(text: str) -> bool:
     Returns:
         True se detectar padrão claramente malicioso, False caso contrário
     """
-    # Padrões ÓBVIOS de command injection
-    cmd_patterns = [
-        r";\s*rm\s+-rf",  # ; rm -rf /
-        r"\|\s*bash",  # | bash
-        r"&&\s*rm\s+",  # && rm
-        r"\$\(.*\)",  # Command substitution $(...)
-    ]
-
-    for pattern in cmd_patterns:
-        if re.search(pattern, text, re.IGNORECASE):
-            logger.warning(f"Padrão command injection detectado: {pattern[:50]}")
+    # Usa padrões pré-compilados para melhor performance
+    for pattern in COMMAND_INJECTION_PATTERNS:
+        if pattern.search(text):
+            logger.warning(f"Padrão command injection detectado: {pattern.pattern[:50]}")
             return True
 
     return False
@@ -168,20 +187,13 @@ def sanitize_input(text: str) -> str:
         logger.warning(f"HTML/tags removidas pela sanitização: {original_text[:100]}")
 
     # Detecta padrões JavaScript perigosos que podem ter escapado
-    js_patterns = [
-        r"javascript\s*:",
-        r"on\w+\s*=",  # onclick=, onload=, etc
-        r"<script",
-        r"</script>",
-    ]
-
-    for pattern in js_patterns:
-        if re.search(pattern, text, re.IGNORECASE):
+    for pattern in JAVASCRIPT_XSS_PATTERNS:
+        if pattern.search(text):
             logger.warning(f"Padrão JavaScript perigoso detectado: {text[:100]}")
             raise SanitizationError("Entrada contém padrões suspeitos de JavaScript/XSS")
 
-    # Remove espaços em branco excessivos
-    text = re.sub(r'\s+', ' ', text)
+    # Remove espaços em branco excessivos (usa padrão pré-compilado)
+    text = WHITESPACE_PATTERN.sub(' ', text)
     text = text.strip()
 
     # Verifica se ainda há conteúdo após sanitização
@@ -197,7 +209,8 @@ def sanitize_input(text: str) -> str:
         raise SanitizationError("Entrada contém padrões claramente maliciosos")
 
     # Limita caracteres repetidos suspeitos (possível DoS ou bypass)
-    if re.search(r'(.)\1{99,}', text):
+    # Usa padrão pré-compilado para melhor performance
+    if REPEATED_CHARS_PATTERN.search(text):
         logger.warning("Sequência excessiva de caracteres repetidos detectada")
         raise SanitizationError("Entrada contém sequências suspeitas de caracteres repetidos")
 
