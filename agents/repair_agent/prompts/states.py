@@ -2,11 +2,13 @@
 Prompts de Estado - Instruções específicas para cada estado da conversação
 """
 
-NEW_PROBLEM_PROMPT = """\n\nAPÓS fornecer a solução completa, SEMPRE termine sua resposta com:
+NEW_PROBLEM_PROMPT = """
 
-"O problema foi resolvido?
-
-NUNCA sugira chamar um profissional na primeira tentativa."""
+INSTRUÇÕES IMPORTANTES:
+- NUNCA sugira chamar um profissional na primeira tentativa
+- SEMPRE forneça uma solução prática e detalhada
+- Ao final da solução, pergunte: "O problema foi resolvido?"
+"""
 
 
 def get_waiting_feedback_prompt(current_attempt: int, max_attempts: int) -> str:
