@@ -78,7 +78,8 @@ export function ChatInput({
         </SendButton>
       </Container>
       <Disclaimer>
-        Vicente é um assistente virtual e pode não entender todos os problemas. Em caso de emergência, contate um profissional.
+        Vicente é um assistente virtual e pode não entender todos os problemas. Em caso de
+        emergência, contate um profissional.
       </Disclaimer>
     </>
   );

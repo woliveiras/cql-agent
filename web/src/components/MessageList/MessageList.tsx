@@ -1,11 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { MessageBubble } from '../MessageBubble';
 import { ThinkingIndicator } from '../ThinkingIndicator';
-import {
-  Container,
-  EmptyStateContainer,
-  MessagesWrapper,
-} from './MessageList.styles';
+import { Container, EmptyStateContainer, MessagesWrapper } from './MessageList.styles';
 import type { MessageListProps } from './types';
 
 export function MessageList({

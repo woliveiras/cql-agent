@@ -173,15 +173,13 @@ export function Chat() {
           feedbackDisabled={isLoading}
           emptyState={
             <>
-              <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🔧</div>
+              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔧</div>
               <h2>Olá! Sou o Vicente</h2>
-              <p style={{ marginTop: "0.5rem" }}>
-                Seu assistente de IA para reparos residenciais
-              </p>
+              <p style={{ marginTop: '0.5rem' }}>Seu assistente de IA para reparos residenciais</p>
               <p
                 style={{
-                  fontSize: "0.875rem",
-                  marginTop: "1rem",
+                  fontSize: '0.875rem',
+                  marginTop: '1rem',
                   opacity: 0.7,
                 }}
               >

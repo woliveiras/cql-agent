@@ -63,13 +63,13 @@ export const StyledTextarea = styled.textarea<{ theme?: Theme }>`
 
 export const CharCounter = styled.span<{ isLimit: boolean; theme?: Theme }>`
   position: absolute;
-  bottom: ${(props) => props.theme?.spacing.xs || "1.25rem"};
-  right: ${(props) => props.theme?.spacing.sm || "1.5rem"};
-  font-size: ${(props) => props.theme?.typography.fontSize.xs || "0.75rem"};
+  bottom: ${(props) => props.theme?.spacing.xs || '1.25rem'};
+  right: ${(props) => props.theme?.spacing.sm || '1.5rem'};
+  font-size: ${(props) => props.theme?.typography.fontSize.xs || '0.75rem'};
   color: ${(props) =>
     props.isLimit
-      ? props.theme?.colors.error.main || "#DC2626"
-      : props.theme?.colors.text.disabled || "#94A3B8"};
+      ? props.theme?.colors.error.main || '#DC2626'
+      : props.theme?.colors.text.disabled || '#94A3B8'};
   pointer-events: none;
 `;
 
@@ -110,20 +110,19 @@ export const SendButton = styled.button<{ theme?: Theme }>`
 `;
 
 export const Disclaimer = styled.p<{ theme?: Theme }>`
-  margin-top: ${(props) => props.theme?.spacing.sm || "0.5rem"};
-  margin-bottom: ${(props) => props.theme?.spacing.sm || "0.5rem"};
-  padding: 0 ${(props) => props.theme?.spacing.md || "1rem"};
-  font-size: ${(props) => props.theme?.typography.fontSize.xs || "0.75rem"};
-  color: ${(props) => props.theme?.colors.text.disabled || "#94A3B8"};
+  margin-top: ${(props) => props.theme?.spacing.sm || '0.5rem'};
+  margin-bottom: ${(props) => props.theme?.spacing.sm || '0.5rem'};
+  padding: 0 ${(props) => props.theme?.spacing.md || '1rem'};
+  font-size: ${(props) => props.theme?.typography.fontSize.xs || '0.75rem'};
+  color: ${(props) => props.theme?.colors.text.disabled || '#94A3B8'};
   text-align: center;
-  line-height: ${(props) =>
-    props.theme?.typography.lineHeight.relaxed || 1.625};
+  line-height: ${(props) => props.theme?.typography.lineHeight.relaxed || 1.625};
   max-width: 900px;
   margin-left: auto;
   margin-right: auto;
 
-  @media (max-width: ${(props) => props.theme?.breakpoints.mobile || "640px"}) {
+  @media (max-width: ${(props) => props.theme?.breakpoints.mobile || '640px'}) {
     font-size: 0.625rem;
-    padding: 0 ${(props) => props.theme?.spacing.sm || "0.5rem"};
+    padding: 0 ${(props) => props.theme?.spacing.sm || '0.5rem'};
   }
 `;
