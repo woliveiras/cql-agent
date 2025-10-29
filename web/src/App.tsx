@@ -4,6 +4,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { queryClient } from './lib/queryClient';
 import { Chat } from './pages/Chat';
+import { NotFound } from './pages/NotFound';
 import { Showcase } from './pages/Showcase';
 import { Welcome } from './pages/Welcome';
 import { globalStyles } from './styles/global';
@@ -33,6 +34,14 @@ function App() {
               }
             />
             <Route path="/showcase" element={<Showcase />} />
+            <Route
+              path="*"
+              element={
+                <Layout showHeader>
+                  <NotFound />
+                </Layout>
+              }
+            />
           </Routes>
         </BrowserRouter>
       </ThemeProvider>
