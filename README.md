@@ -162,7 +162,7 @@ O projeto é dividido em três componentes principais:
 
 **Frontend (Opcional):**
 
-- Node.js 18+ ou 20+
+- Node.js 22.20.0+ (versão especificada em `.nvmrc`)
 - pnpm 10+
 
 ### 2. Configurar Provedor de LLM
