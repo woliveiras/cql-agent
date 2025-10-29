@@ -23,6 +23,10 @@ from .prompts import (
 from agents.rag import VectorStoreManager, DocumentRetriever
 from agents.tools import WebSearchTool
 from agents.llm import LLMFactory
+from api.logging_config import get_logger
+
+# Logger para o agente
+logger = get_logger(__name__, component="repair_agent")
 
 
 class ConversationState(Enum):
@@ -95,22 +99,25 @@ class RepairAgent:
                     k=3,
                     relevance_threshold=0.8
                 )
-                print("✅ RAG inicializado com sucesso!")
+                logger.info("RAG inicializado com sucesso")
             except Exception as e:
-                print(f"⚠️  RAG não disponível: {e}")
+                logger.warning(f"RAG não disponível: {e}")
                 self.retriever = None
         elif use_rag:
-            print(f"⚠️  Base de conhecimento não encontrada em {chroma_db_path}")
-            print("   Execute: uv run scripts/setup_rag.py")
+            logger.warning(
+                f"Base de conhecimento não encontrada",
+                extra={"chroma_db_path": chroma_db_path}
+            )
+            logger.info("Execute: uv run scripts/setup_rag.py")
 
         # Inicializa Web Search se habilitado
         self.web_search: Optional[WebSearchTool] = None
         if use_web_search:
             try:
                 self.web_search = WebSearchTool(max_results=3, region="br-pt")
-                print("✅ Busca web inicializada com sucesso!")
+                logger.info("Busca web inicializada com sucesso")
             except Exception as e:
-                print(f"⚠️  Busca web não disponível: {e}")
+                logger.warning(f"Busca web não disponível: {e}")
                 self.web_search = None
 
     def _get_system_prompt(
@@ -229,8 +236,8 @@ class RepairAgent:
         if self.state == ConversationState.MAX_ATTEMPTS:
             return get_max_attempts_message(self.max_attempts)
 
-        # Mostra mensagem de processamento
-        print("🤖 Agente: Processando...", end="\r", flush=True)
+        # Log de processamento
+        logger.debug("Processando mensagem do usuário")
 
         # 1. Busca contexto relevante no RAG (apenas para novas perguntas)
         rag_context = None
@@ -240,22 +247,22 @@ class RepairAgent:
             try:
                 rag_context, has_relevant = self.retriever.retrieve_and_format(user_message)
                 if has_relevant:
-                    print("\n📚 Encontrei informações!\n")
+                    logger.info("RAG: informações relevantes encontradas na base de conhecimento")
             except Exception as e:
-                print(f"⚠️  Erro ao buscar documentos: {e}")
+                logger.error(f"Erro ao buscar documentos no RAG: {e}", exc_info=True)
                 rag_context = None
 
         # 2. Se RAG não encontrou nada, busca na web (fallback)
         if not rag_context and self.web_search and self.state == ConversationState.NEW_PROBLEM:
             try:
-                print("🌐 Buscando informações na internet...\n")
+                logger.info("Buscando informações na internet...")
                 web_context = self.web_search.search(user_message)
                 if web_context:
-                    print("✅ Encontrei informações atualizadas na internet!\n")
+                    logger.info("Web Search: informações atualizadas encontradas")
                 else:
-                    print("⚠️  Nenhuma informação relevante encontrada na web.\n")
+                    logger.warning("Web Search: nenhuma informação relevante encontrada")
             except Exception as e:
-                print(f"⚠️  Erro na busca web: {e}")
+                logger.error(f"Erro na busca web: {e}", exc_info=True)
                 web_context = None
 
         # Adiciona mensagem do usuário ao histórico
