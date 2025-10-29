@@ -10,6 +10,7 @@ import {
   ChatContent,
   CloseButton,
   ErrorBanner,
+  ErrorMessage,
   NewConsultationButton,
   NewConsultationContainer,
   NewConsultationText,
@@ -127,6 +128,17 @@ export function Chat() {
     }
   }, [initialMessage, messages.length, maxAttemptsReached, handleSend]);
 
+  // Auto-fechar erro após 5 segundos
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => {
+        clearError();
+      }, 5000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [error, clearError]);
+
   const handleCloseError = () => {
     clearError();
   };
@@ -147,7 +159,7 @@ export function Chat() {
     <ChatContainer>
       {error && (
         <ErrorBanner>
-          <span>⚠️ {error}</span>
+          <ErrorMessage>⚠️ {error}</ErrorMessage>
           <CloseButton onClick={handleCloseError}>×</CloseButton>
         </ErrorBanner>
       )}
@@ -160,13 +172,15 @@ export function Chat() {
           feedbackDisabled={isLoading}
           emptyState={
             <>
-              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔧</div>
+              <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🔧</div>
               <h2>Olá! Sou o Vicente</h2>
-              <p style={{ marginTop: '0.5rem' }}>Seu assistente de IA para reparos residenciais</p>
+              <p style={{ marginTop: "0.5rem" }}>
+                Seu assistente de IA para reparos residenciais
+              </p>
               <p
                 style={{
-                  fontSize: '0.875rem',
-                  marginTop: '1rem',
+                  fontSize: "0.875rem",
+                  marginTop: "1rem",
                   opacity: 0.7,
                 }}
               >
