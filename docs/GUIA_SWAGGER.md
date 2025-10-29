@@ -1,4 +1,4 @@
-# 🧪 Testando a API do Repair Agent
+# 🧪 Testando a API do CQL Assistant
 
 ## 🌐 Documentação Interativa
 
@@ -104,7 +104,7 @@ http://localhost:5000/docs
 
 ### 1. Importar Collection
 
-Crie uma nova Collection chamada "Repair Agent API"
+Crie uma nova Collection chamada "CQL Assistant API"
 
 ### 2. Request 1: Health Check
 
@@ -403,7 +403,7 @@ Cole este JSON no Postman (Import > Raw text):
 ```json
 {
   "info": {
-    "name": "Repair Agent API",
+    "name": "CQL Assistant API",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [

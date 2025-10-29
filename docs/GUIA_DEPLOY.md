@@ -206,7 +206,7 @@ sudo nano /etc/systemd/system/repair-agent-api.service
 
 ```ini
 [Unit]
-Description=Repair Agent API
+Description=CQL Assistant API
 After=network.target
 
 [Service]

@@ -125,7 +125,7 @@ def reset_session(session_id):
 def main():
     """Executa todos os testes"""
     print("=" * 70)
-    print("🧪 TESTE DA API REST - REPAIR AGENT")
+    print("🧪 TESTE DA API REST - CQL Assistant")
     print("=" * 70)
 
     # Aguardar API iniciar

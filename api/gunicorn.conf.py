@@ -1,5 +1,5 @@
 """
-Configuração do Gunicorn para Repair Agent API
+Configuração do Gunicorn para CQL Assistant API
 """
 
 import multiprocessing

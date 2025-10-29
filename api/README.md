@@ -1,4 +1,4 @@
-# 📘 API REST - Repair Agent
+# 📘 API REST - CQL Assistant
 
 ## 🎯 Visão Geral
 
@@ -20,7 +20,7 @@ API FastAPI moderna para o Agente de Reparos Residenciais, fornecendo endpoints 
          │
          ▼
 ┌─────────────────┐
-│  Repair Agent   │
+│  CQL Assistant  │
 │  RAG + Web      │
 └────────┬────────┘
          │

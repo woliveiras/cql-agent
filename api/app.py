@@ -28,6 +28,7 @@ from api.security.sanitizer import SanitizationError  # noqa: E402
 from api.security import sanitize_input, ContentGuardrail  # noqa: E402
 from api.auth import AuthMiddleware  # noqa: E402
 from agents import RepairAgent  # noqa: E402
+import asyncio  # noqa: E402
 
 # Configuração de logging estruturado
 setup_logging(
@@ -38,7 +39,7 @@ logger = get_logger(__name__, component="api")
 
 # Inicialização do FastAPI
 app = FastAPI(
-    title="Repair Agent API",
+    title="CQL Assistant API",
     description="API para agente de IA especializado em reparos residenciais com RAG e busca web",
     version="1.0.0",
     docs_url="/docs",
@@ -46,18 +47,105 @@ app = FastAPI(
     openapi_url="/api/v1/openapi.json"
 )
 
-# Configuração CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
+# Middleware de Request Body Size Limit
+@app.middleware("http")
+async def limit_request_body_size(request: Request, call_next):
+    """
+    Limita o tamanho do corpo da requisição para prevenir ataques de DoS
+    """
+    max_size = int(os.getenv("MAX_REQUEST_BODY_SIZE", str(10 * 1024 * 1024)))  # 10MB padrão
+
+    if request.method in ["POST", "PUT", "PATCH"]:
+        content_length = request.headers.get("content-length")
+
+        if content_length:
+            content_length = int(content_length)
+            if content_length > max_size:
+                return JSONResponse(
+                    status_code=413,
+                    content={
+                        "error": "Payload Too Large",
+                        "detail": f"Request body too large. Maximum size: {max_size / 1024 / 1024:.1f}MB"
+                    }
+                )
+
+    return await call_next(request)
+
+# Middleware de Security Headers
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    """
+    Adiciona headers de segurança HTTP em todas as respostas
+    """
+    response = await call_next(request)
+
+    # Previne clickjacking
+    response.headers["X-Frame-Options"] = "DENY"
+
+    # Previne MIME sniffing
+    response.headers["X-Content-Type-Options"] = "nosniff"
+
+    # XSS Protection (navegadores antigos)
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+
+    # Força HTTPS (apenas em produção)
+    if os.getenv("ENVIRONMENT") == "production":
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+
+    # Content Security Policy
+    csp_policy = (
+        "default-src 'self'; "
+        "script-src 'self'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: https:; "
+        "font-src 'self'; "
+        "connect-src 'self'; "
+        "frame-ancestors 'none'; "
+        "base-uri 'self'; "
+        "form-action 'self'"
+    )
+    response.headers["Content-Security-Policy"] = csp_policy
+
+    # Referrer Policy
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+
+    # Permissions Policy
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+
+    return response
+
+# Configuração CORS - Origens específicas baseadas no ambiente
+def get_allowed_origins() -> list[str]:
+    """Retorna lista de origens permitidas baseada no ambiente"""
+    # Origens padrão de desenvolvimento
+    dev_origins = [
         "http://localhost:5001",
         "http://127.0.0.1:5001",
         "http://localhost:5173",  # Frontend React (Vite)
-        "*"  # Permite qualquer origem em desenvolvimento
-    ],
+        "http://127.0.0.1:5173",
+    ]
+
+    # Em produção, usar variável de ambiente
+    env = os.getenv("ENVIRONMENT", "development")
+    if env == "production":
+        # Pegar origens da variável de ambiente (separadas por vírgula)
+        prod_origins = os.getenv("CORS_ORIGINS", "")
+        if prod_origins:
+            return [origin.strip() for origin in prod_origins.split(",")]
+        # Se não configurado, retornar lista vazia (bloqueará tudo)
+        logger.warning("CORS_ORIGINS não configurado em produção!")
+        return []
+
+    # Em desenvolvimento, permitir origens locais
+    return dev_origins
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=get_allowed_origins(),
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-Anonymous-Token"],
+    expose_headers=["X-Anonymous-Token", "X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset"],
 )
 
 # Middleware de autenticação e rate limiting
@@ -254,6 +342,105 @@ session_manager = SessionManager(use_redis=use_redis)
 content_guardrail = ContentGuardrail(strict_mode=False)
 
 
+# Validação de configuração em produção
+@app.on_event("startup")
+async def validate_production_config():
+    """Valida configurações obrigatórias em produção"""
+    env = os.getenv("ENVIRONMENT", "development")
+
+    logger.info(
+        "Iniciando aplicação",
+        extra={"environment": env, "use_redis": use_redis}
+    )
+
+    if env == "production":
+        # Validar JWT_SECRET_KEY
+        jwt_secret = os.getenv("JWT_SECRET_KEY", "")
+        if not jwt_secret or len(jwt_secret) < 32:
+            error_msg = (
+                "JWT_SECRET_KEY obrigatório em produção (mínimo 32 caracteres)! "
+                "Configure a variável de ambiente antes de iniciar."
+            )
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+
+        # Validar CORS_ORIGINS
+        cors_origins = os.getenv("CORS_ORIGINS", "")
+        if not cors_origins:
+            logger.warning(
+                "CORS_ORIGINS não configurado em produção! "
+                "Todas as origens serão bloqueadas."
+            )
+
+        # Validar que não está usando valores padrão inseguros
+        if os.getenv("REDIS_PASSWORD", "") == "":
+            logger.warning(
+                "Redis sem senha em produção! "
+                "Configure REDIS_PASSWORD para maior segurança."
+            )
+
+        logger.info("Validação de configuração de produção: OK")
+
+
+# Exception Handlers Globais
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Handler global para exceções não tratadas"""
+    with LogContext(path=request.url.path, event_type="unhandled_error"):
+        logger.error(
+            "Erro não tratado",
+            exc_info=True,
+            extra={"error_type": type(exc).__name__}
+        )
+
+    # Não expor detalhes em produção
+    env = os.getenv("ENVIRONMENT", "development")
+    if env == "production":
+        detail = "Erro interno do servidor. Por favor, tente novamente mais tarde."
+    else:
+        detail = f"Erro: {str(exc)}"
+
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={
+            "error": "Erro interno",
+            "detail": detail
+        }
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Handler para erros de validação do Pydantic"""
+    with LogContext(path=request.url.path, event_type="validation_error"):
+        logger.warning(
+            "Erro de validação",
+            extra={
+                "errors": exc.errors(),
+                "body": str(exc.body)[:200]  # Limitar tamanho do log
+            }
+        )
+
+    # Sanitizar mensagens de erro para não expor estrutura interna
+    errors = []
+    for error in exc.errors():
+        field = " -> ".join([str(x) for x in error["loc"]])
+        errors.append({
+            "field": field,
+            "message": error["msg"],
+            "type": error["type"]
+        })
+
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={
+            "error": "Dados inválidos",
+            "detail": "Verifique os campos e tente novamente.",
+            "errors": errors
+        }
+    )
+
+
 def get_or_create_agent(session_id: str, use_rag: bool = True, use_web_search: bool = True) -> RepairAgent:
     """Obtém ou cria um agente para a sessão"""
     return session_manager.get_or_create_agent(
@@ -388,7 +575,25 @@ async def send_message(request: ChatRequest):
                     "relevance_score": validation_result['score']
                 }
             )
-            response = agent.chat(sanitized_message)
+
+            # Timeout configurável (padrão: 60 segundos)
+            timeout_seconds = int(os.getenv("LLM_TIMEOUT", "60"))
+
+            try:
+                # Executar agent.chat() com timeout usando asyncio.to_thread
+                response = await asyncio.wait_for(
+                    asyncio.to_thread(agent.chat, sanitized_message),
+                    timeout=timeout_seconds
+                )
+            except asyncio.TimeoutError:
+                logger.error(
+                    "Timeout ao processar mensagem",
+                    extra={"timeout_seconds": timeout_seconds}
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+                    detail=f"Tempo limite excedido ({timeout_seconds}s). Por favor, tente novamente."
+                )
 
             # Persistir mudanças de estado do agente
             session_manager.update_agent(request.session_id, agent)
@@ -468,13 +673,13 @@ async def list_sessions():
 @app.get("/", include_in_schema=False)
 async def root():
     """Rota raiz"""
-    return JSONResponse(content={"message": "Repair Agent API", "docs": "/docs"})
+    return JSONResponse(content={"message": "CQL Assistant API", "docs": "/docs"})
 
 
 if __name__ == "__main__":
     import uvicorn
     logger.info(
-        "Iniciando Repair Agent API",
+        "Iniciando CQL Assistant API",
         extra={
             "event_type": "startup",
             "host": "0.0.0.0",

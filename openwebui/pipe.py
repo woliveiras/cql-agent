@@ -1,5 +1,5 @@
 """
-title: Repair Agent
+title: CQL Assistant
 author: woliveiras
 author_url: https://github.com/woliveiras
 funding_url: https://github.com/woliveiras
@@ -16,13 +16,13 @@ import uuid
 class Pipe:
     """
     Pipe para OpenWebUI
-    Conecta o OpenWebUI ao Repair Agent via API REST
+    Conecta o OpenWebUI ao CQL Assistant via API REST
     """
 
     class Valves(BaseModel):
         API_BASE_URL: str = Field(
             default="http://api:5000/api/v1",
-            description="URL base da API do Repair Agent"
+            description="URL base da API do CQL Assistant"
         )
         USE_RAG: bool = Field(
             default=True,
@@ -49,15 +49,15 @@ class Pipe:
         return [
             {
                 "id": "repair-agent-rag-web",
-                "name": "Repair Agent (RAG + Web Search)"
+                "name": "CQL Assistant (RAG + Web Search)"
             },
             {
                 "id": "repair-agent-rag",
-                "name": "Repair Agent (RAG Only)"
+                "name": "CQL Assistant (RAG Only)"
             },
             {
                 "id": "repair-agent-base",
-                "name": "Repair Agent (Base LLM)"
+                "name": "CQL Assistant (Base LLM)"
             }
         ]
 

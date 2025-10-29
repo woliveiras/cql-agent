@@ -76,7 +76,7 @@ class SecurityTest:
     def run_all_tests(self):
         """Executa todos os testes de segurança"""
         print("=" * 70)
-        print("🔒 TESTES DE SEGURANÇA - REPAIR AGENT API")
+        print("🔒 TESTES DE SEGURANÇA - CQL Assistant API")
         print("=" * 70)
 
         # Categoria 1: Mensagens válidas (devem passar)

@@ -162,7 +162,7 @@ Abra no navegador: **<http://localhost:8080>**
 
 ### 3. Ativar a Function
 
-1. Encontre **"Repair Agent"** na lista
+1. Encontre **"CQL Assistant"** na lista
 2. Clique no toggle para **ATIVAR** ✅
 3. A function agora está disponível para uso
 
@@ -182,7 +182,7 @@ Clique em **⚙️ Configure** na Pipe Function para ajustar:
 
 A Pipe Function expõe **3 modelos virtuais**:
 
-### 1. **Repair Agent (RAG + Web Search)** 🔍🌐
+### 1. **CQL Assistant (RAG + Web Search)** 🔍🌐
 
 - **ID**: `repair-agent-rag-web`
 - **Recursos**: RAG + Busca Web + LLM
@@ -196,7 +196,7 @@ A Pipe Function expõe **3 modelos virtuais**:
 🤖 [Busca nos PDFs] → [Busca na Web] → [Resposta completa com contexto]
 ```
 
-### 2. **Repair Agent (RAG Only)** 📚
+### 2. **CQL Assistant (RAG Only)** 📚
 
 - **ID**: `repair-agent-rag`
 - **Recursos**: Apenas RAG + LLM (sem internet)
@@ -210,7 +210,7 @@ A Pipe Function expõe **3 modelos virtuais**:
 🤖 [Busca apenas nos PDFs] → [Resposta baseada na documentação]
 ```
 
-### 3. **Repair Agent (Base LLM)** 🧠
+### 3. **CQL Assistant (Base LLM)** 🧠
 
 - **ID**: `repair-agent-base`
 - **Recursos**: Apenas LLM (sem RAG, sem Web)
@@ -290,7 +290,7 @@ def get_models(self) -> List[dict]:
         # ... modelos existentes
         {
             "id": "repair-agent-custom",
-            "name": "Repair Agent (Custom Mode)"
+            "name": "CQL Assistant (Custom Mode)"
         }
     ]
 ```
@@ -304,7 +304,7 @@ def get_models(self) -> List[dict]:
 **Sintomas:**
 
 - Lista de Functions vazia
-- "Repair Agent" não aparece
+- "CQL Assistant" não aparece
 
 **Soluções:**
 
@@ -360,7 +360,7 @@ docker logs repair-agent-api
 
 3. **Verificar URL na Pipe:**
 
-- Abrir OpenWebUI → Settings → Functions → Repair Agent → Configure
+- Abrir OpenWebUI → Settings → Functions → CQL Assistant → Configure
 - Confirmar `API_BASE_URL = http://api:5000/api/v1`
 - **NÃO usar `localhost`** (use o nome do serviço Docker: `api`)
 
@@ -474,7 +474,7 @@ print(search_web('test'))
 
 3. **Verificar se está habilitado:**
 
-- No OpenWebUI, use o modelo **"Repair Agent (RAG + Web Search)"**
+- No OpenWebUI, use o modelo **"CQL Assistant (RAG + Web Search)"**
 - Ou configure `USE_WEB_SEARCH = True` nas Valves
 
 ---
@@ -521,7 +521,7 @@ curl http://localhost:5000/api/v1/chat/sessions | jq
 ### Exemplo 1: Pergunta com RAG + Web
 
 ```
-Modelo: Repair Agent (RAG + Web Search)
+Modelo: CQL Assistant (RAG + Web Search)
 
 👤 Como consertar uma torneira que está pingando?
 
@@ -542,7 +542,7 @@ Para consertar uma torneira que está pingando, siga estes passos:
 ### Exemplo 2: Pergunta apenas com documentação
 
 ```
-Modelo: Repair Agent (RAG Only)
+Modelo: CQL Assistant (RAG Only)
 
 👤 Quais ferramentas preciso para trocar um disjuntor?
 
@@ -556,7 +556,7 @@ Modelo: Repair Agent (RAG Only)
 ### Exemplo 3: Conversa casual
 
 ```
-Modelo: Repair Agent (Base LLM)
+Modelo: CQL Assistant (Base LLM)
 
 👤 Oi, tudo bem?
 
@@ -616,5 +616,5 @@ async def chat_message(request: Request):
 ---
 
 **Criado em**: Outubro 2025  
-**Projeto**: CQL Agent - Repair Agent com RAG e Web Search  
+**Projeto**: CQL Agent - CQL Assistant com RAG e Web Search  
 **Stack**: FastAPI + OpenWebUI + LangChain + Ollama + ChromaDB
