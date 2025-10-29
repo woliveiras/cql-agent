@@ -1,9 +1,24 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
+import { VitePWA } from 'vite-plugin-pwa';
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'public',
+      filename: 'service-worker.js',
+      injectManifest: {
+        injectionPoint: undefined,
+      },
+      devOptions: {
+        enabled: true,
+        type: 'module',
+      },
+    }),
+  ],
   server: {
     port: 5001,
     host: true,

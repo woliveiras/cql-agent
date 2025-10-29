@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vicente - Offline</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .container {
+      background: white;
+      border-radius: 1rem;
+      padding: 3rem;
+      max-width: 500px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    .icon {
+      font-size: 5rem;
+      margin-bottom: 1.5rem;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.1);
+      }
+    }
+
+    h1 {
+      font-size: 2rem;
+      color: #334155;
+      margin-bottom: 1rem;
+    }
+
+    p {
+      font-size: 1.125rem;
+      color: #64748b;
+      line-height: 1.75;
+      margin-bottom: 2rem;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.5rem;
+      background: #fee2e2;
+      color: #dc2626;
+      border-radius: 9999px;
+      font-weight: 600;
+      margin-bottom: 2rem;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background: #dc2626;
+      border-radius: 50%;
+      animation: blink 1.5s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.3;
+      }
+    }
+
+    .button {
+      display: inline-block;
+      padding: 1rem 2rem;
+      background: #dc2626;
+      color: white;
+      text-decoration: none;
+      border-radius: 0.5rem;
+      font-weight: 600;
+      transition: all 0.2s;
+      border: none;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+
+    .button:hover {
+      background: #b91c1c;
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(220, 38, 38, 0.3);
+    }
+
+    .info {
+      margin-top: 2rem;
+      padding-top: 2rem;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    .info-item {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      margin: 0.75rem 0;
+      color: #64748b;
+      font-size: 0.875rem;
+    }
+
+    .check {
+      color: #16a34a;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">📡</div>
+
+    <div class="status">
+      <span class="status-dot"></span>
+      Sem Conexão
+    </div>
+
+    <h1>Você está offline</h1>
+
+    <p>
+      Não conseguimos conectar ao servidor Vicente.
+      Suas mensagens estão sendo salvas e serão enviadas automaticamente quando a conexão voltar.
+    </p>
+
+    <button class="button" onclick="window.location.reload()">
+      🔄 Tentar Novamente
+    </button>
+
+    <div class="info">
+      <div class="info-item">
+        <span class="check">✓</span>
+        Suas mensagens estão seguras
+      </div>
+      <div class="info-item">
+        <span class="check">✓</span>
+        Sincronização automática ao voltar online
+      </div>
+      <div class="info-item">
+        <span class="check">✓</span>
+        Nenhum dado será perdido
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Tentar reconectar automaticamente a cada 10 segundos
+    let reconnectInterval = setInterval(() => {
+      if (navigator.onLine) {
+        console.log('Conexão restaurada, recarregando...');
+        window.location.reload();
+      }
+    }, 10000);
+
+    // Listener para evento online
+    window.addEventListener('online', () => {
+      console.log('Voltou online!');
+      clearInterval(reconnectInterval);
+      window.location.reload();
+    });
+  </script>
+</body>
+</html>
