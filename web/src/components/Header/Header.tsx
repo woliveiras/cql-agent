@@ -34,7 +34,7 @@ export const Header = ({ onNewChat }: HeaderProps) => {
       <HeaderContent>
         <Logo onClick={handleLogoClick}>
           <LogoIcon>🔧</LogoIcon>
-          <span>RepairChat</span>
+          <span>CQL Assistant</span>
         </Logo>
 
         <Nav>

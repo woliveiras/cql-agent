@@ -1,11 +1,9 @@
 import { useEffect, useRef } from 'react';
-import { Avatar } from '../Avatar';
-import { LoadingIndicator } from '../LoadingIndicator';
 import { MessageBubble } from '../MessageBubble';
+import { ThinkingIndicator } from '../ThinkingIndicator';
 import {
   Container,
   EmptyStateContainer,
-  LoadingContainer,
   MessagesWrapper,
 } from './MessageList.styles';
 import type { MessageListProps } from './types';
@@ -59,12 +57,7 @@ export function MessageList({
           />
         ))}
 
-        {isLoading && (
-          <LoadingContainer>
-            <Avatar variant="assistant" size="small" />
-            <LoadingIndicator />
-          </LoadingContainer>
-        )}
+        {isLoading && <ThinkingIndicator />}
 
         <div ref={messagesEndRef} />
       </MessagesWrapper>

@@ -98,7 +98,7 @@ export function Showcase() {
   return (
     <Container>
       <Header>
-        <Title>🎨 RepairChat - Design System</Title>
+        <Title>🎨 CQL Assistant - Design System</Title>
         <Subtitle>Componentes e estilos da interface de chat para reparos residenciais</Subtitle>
       </Header>
 

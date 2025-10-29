@@ -47,10 +47,3 @@ export const EmptyStateContainer = styled.div<{ theme?: Theme }>`
   text-align: center;
   padding: ${(props) => props.theme?.spacing['2xl'] || '3rem'};
 `;
-
-export const LoadingContainer = styled.div<{ theme?: Theme }>`
-  display: flex;
-  align-items: flex-start;
-  gap: ${(props) => props.theme?.spacing.md || '1rem'};
-  margin-bottom: ${(props) => props.theme?.spacing.lg || '1.5rem'};
-`;

@@ -1,4 +1,4 @@
-# 🎨 RepairChat - Frontend
+# 🎨 CQL Assistant - Frontend
 
 Interface web moderna para o assistente de IA de reparos residenciais.
 
