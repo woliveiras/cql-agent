@@ -11,6 +11,7 @@ import {
   CloseButton,
   ErrorBanner,
   ErrorMessage,
+  InputSection,
   NewConsultationButton,
   NewConsultationContainer,
   NewConsultationText,
@@ -189,7 +190,9 @@ export function Chat() {
             </>
           }
         />
+      </ChatContent>
 
+      <InputSection>
         {maxAttemptsReached ? (
           <NewConsultationContainer>
             <NewConsultationText>
@@ -209,7 +212,7 @@ export function Chat() {
             maxLength={500}
           />
         )}
-      </ChatContent>
+      </InputSection>
     </ChatContainer>
   );
 }

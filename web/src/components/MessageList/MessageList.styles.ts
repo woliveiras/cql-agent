@@ -41,9 +41,13 @@ export const EmptyStateContainer = styled.div<{ theme?: Theme }>`
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  height: 100%;
+  justify-content: flex-start;
+  padding-top: ${(props) => props.theme?.spacing['4xl'] || '6rem'};
   color: ${(props) => props.theme?.colors.text.secondary || '#475569'};
   text-align: center;
-  padding: ${(props) => props.theme?.spacing['2xl'] || '3rem'};
+  padding-bottom: ${(props) => props.theme?.spacing['2xl'] || '3rem'};
+
+  @media (max-width: ${(props) => props.theme?.breakpoints.mobile || '640px'}) {
+    padding-top: ${(props) => props.theme?.spacing['2xl'] || '3rem'};
+  }
 `;

@@ -14,8 +14,11 @@ export const globalStyles = (theme: Theme) => css`
     -moz-osx-font-smoothing: grayscale;
   }
 
+  html,
+  body,
   #root {
-    width: 100%
+    width: 100%;
+    height: 100%;
   }
 
   body {
@@ -25,6 +28,8 @@ export const globalStyles = (theme: Theme) => css`
     line-height: ${theme.typography.lineHeight.normal};
     color: ${theme.colors.text.primary};
     background-color: ${theme.colors.background.default};
+    margin: 0;
+    padding: 0;
   }
 
   h1,

@@ -7,15 +7,26 @@ export const ChatContainer = styled.div`
   height: 100%;
   width: 100%;
   align-items: center;
+  position: relative;
 `;
 
 export const ChatContent = styled.div`
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
   width: 100%;
   max-width: 1200px;
+  overflow: hidden;
+  position: relative;
+`;
+
+export const InputSection = styled.div<{ theme?: Theme }>`
+  width: 100%;
+  max-width: 1200px;
+  background-color: ${(props) => props.theme?.colors.background.default || '#FFFFFF'};
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
 `;
 
 export const ErrorBanner = styled.div<{ theme?: Theme }>`
