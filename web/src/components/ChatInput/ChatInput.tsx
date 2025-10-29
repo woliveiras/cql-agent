@@ -2,6 +2,7 @@ import { type KeyboardEvent, useEffect, useRef } from 'react';
 import {
   CharCounter,
   Container,
+  Disclaimer,
   InputWrapper,
   SendButton,
   StyledTextarea,
@@ -47,33 +48,38 @@ export function ChatInput({
   const canSend = value.trim().length > 0 && !disabled;
 
   return (
-    <Container>
-      <InputWrapper>
-        <StyledTextarea
-          ref={textareaRef}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-          disabled={disabled}
-          placeholder={placeholder}
-          maxLength={maxLength}
-          rows={1}
-        />
-        {maxLength && (
-          <CharCounter isLimit={isAtLimit}>
-            {value.length}/{maxLength}
-          </CharCounter>
-        )}
-      </InputWrapper>
+    <>
+      <Container>
+        <InputWrapper>
+          <StyledTextarea
+            ref={textareaRef}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={disabled}
+            placeholder={placeholder}
+            maxLength={maxLength}
+            rows={1}
+          />
+          {maxLength && (
+            <CharCounter isLimit={isAtLimit}>
+              {value.length}/{maxLength}
+            </CharCounter>
+          )}
+        </InputWrapper>
 
-      <SendButton
-        onClick={handleSendClick}
-        disabled={!canSend}
-        type="button"
-        aria-label="Enviar mensagem"
-      >
-        ↑
-      </SendButton>
-    </Container>
+        <SendButton
+          onClick={handleSendClick}
+          disabled={!canSend}
+          type="button"
+          aria-label="Enviar mensagem"
+        >
+          ↑
+        </SendButton>
+      </Container>
+      <Disclaimer>
+        Vicente é um assistente virtual e pode não entender todos os problemas. Em caso de emergência, contate um profissional.
+      </Disclaimer>
+    </>
   );
 }

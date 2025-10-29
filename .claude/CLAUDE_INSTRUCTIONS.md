@@ -28,6 +28,15 @@
 
 - Você NUNCA deve commitar código
 
+### Documentação
+
+- Apenas quando solicitado
+- Formato Markdown, pt-BR
+
+### Outros arquivos de informação
+
+- Não crie arquivos adicionais sem aprovação prévia
+
 ## Áreas Críticas
 
 1. **`api/security/`**
@@ -42,7 +51,6 @@
    - Após mudanças: `rm -rf chroma_db/ && uv run scripts/setup_rag.py`
 
 4. **`.env`**
-   - NUNCA commite valores sensíveis
    - Mantenha `.env.example` atualizado
 
 5. **`api/app.py`** (ALTA) - Endpoints com validação de segurança

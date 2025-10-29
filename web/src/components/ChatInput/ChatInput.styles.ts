@@ -108,3 +108,20 @@ export const SendButton = styled.button<{ theme?: Theme }>`
     outline-offset: 2px;
   }
 `;
+
+export const Disclaimer = styled.p<{ theme?: Theme }>`
+  margin-top: ${(props) => props.theme?.spacing.sm || '0.5rem'};
+  padding: 0 ${(props) => props.theme?.spacing.md || '1rem'};
+  font-size: ${(props) => props.theme?.typography.fontSize.xs || '0.75rem'};
+  color: ${(props) => props.theme?.colors.text.disabled || '#94A3B8'};
+  text-align: center;
+  line-height: ${(props) => props.theme?.typography.lineHeight.relaxed || 1.625};
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+
+  @media (max-width: ${(props) => props.theme?.breakpoints.mobile || '640px'}) {
+    font-size: 0.625rem;
+    padding: 0 ${(props) => props.theme?.spacing.sm || '0.5rem'};
+  }
+`;
